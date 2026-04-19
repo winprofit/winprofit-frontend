@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API = axios.create({ baseURL: 'http://localhost:3001/api' });
+const API = axios.create({ baseURL: 'https://winprofit-backend-production.up.railway.app/api' });
 
 // Attach the Supabase JWT to every request automatically
 API.interceptors.request.use(cfg => {
