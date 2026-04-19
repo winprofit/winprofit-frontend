@@ -2,12 +2,16 @@ import axios from 'axios';
 
 const API = axios.create({ baseURL: 'https://winprofit-backend-production.up.railway.app/api' });
 
-// Attach the Supabase JWT to every request automatically
 API.interceptors.request.use(cfg => {
-  const session = localStorage.getItem('winprofit_session');
-  if (session) {
-    const { access_token } = JSON.parse(session);
-    cfg.headers.Authorization = `Bearer ${access_token}`;
+  const keys = Object.keys(localStorage);
+  for (const key of keys) {
+    try {
+      const val = JSON.parse(localStorage.getItem(key));
+      if (val && val.access_token) {
+        cfg.headers.Authorization = `Bearer ${val.access_token}`;
+        break;
+      }
+    } catch (e) {}
   }
   return cfg;
 });
