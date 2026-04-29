@@ -327,7 +327,113 @@ function ExpensesTab({ onSaved }) {
     </div>
   );
 }
+function InventoryTab({ onSaved }) {
+  const thisMonth = () => new Date().toISOString().slice(0, 7);
+  const [month, setMonth]       = useState(thisMonth());
+  const [opening, setOpening]   = useState({ meat_seafood:'', produce:'', dairy_eggs:'', dry_goods:'', beverages:'', other:'' });
+  const [closing, setClosing]   = useState({ meat_seafood:'', produce:'', dairy_eggs:'', dry_goods:'', beverages:'', other:'' });
+  const [saving, setSaving]     = useState('');
+  const [msg, setMsg]           = useState('');
 
+  const categories = [
+    { key: 'meat_seafood', label: 'Meat & Seafood' },
+    { key: 'produce',      label: 'Produce' },
+    { key: 'dairy_eggs',   label: 'Dairy & Eggs' },
+    { key: 'dry_goods',    label: 'Dry Goods & Pantry' },
+    { key: 'beverages',    label: 'Beverages' },
+    { key: 'other',        label: 'Other' },
+  ];
+
+  useEffect(() => { loadInventory(); }, [month]);
+
+  async function loadInventory() {
+    try {
+      const res = await API.get(`/inventory?month=${month}`);
+      res.data.forEach(inv => {
+        const vals = {};
+        categories.forEach(c => { vals[c.key] = inv[c.key] / 100; });
+        if (inv.type === 'opening') setOpening(vals);
+        if (inv.type === 'closing') setClosing(vals);
+      });
+    } catch (e) { console.error(e); }
+  }
+
+  async function save(type) {
+    setSaving(type); setMsg('');
+    const vals = type === 'opening' ? opening : closing;
+    try {
+      await API.post('/inventory', { month, type, ...Object.fromEntries(Object.entries(vals).map(([k,v]) => [k, parseFloat(v)||0])) });
+      setMsg(`${type === 'opening' ? 'Opening' : 'Closing'} inventory saved!`);
+      onSaved();
+      setTimeout(() => setMsg(''), 2000);
+    } catch (e) {
+      setMsg('Error saving. Please try again.');
+    } finally {
+      setSaving('');
+    }
+  }
+
+  const totalOpening = Object.values(opening).reduce((s,v) => s + (parseFloat(v)||0), 0);
+  const totalClosing = Object.values(closing).reduce((s,v) => s + (parseFloat(v)||0), 0);
+
+  return (
+    <div>
+      <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
+        <div className="section-title" style={{ margin:0 }}>Inventory count</div>
+        <input type="month" value={month} onChange={e => setMonth(e.target.value)}
+          style={{ border:'1px solid #ddd', borderRadius:8, padding:'6px 10px', fontSize:13 }} />
+      </div>
+
+      {msg && <div className={`msg ${msg.includes('Error') ? 'msg-err' : 'msg-ok'}`} style={{ marginBottom:12 }}>{msg}</div>}
+
+      <div className="two-col">
+        <div className="card">
+          <div className="card-title">Opening inventory — start of month</div>
+          {categories.map(c => (
+            <div className="field" key={c.key} style={{ marginBottom:8 }}>
+              <label>{c.label}</label>
+              <input type="number" placeholder="$0" min="0"
+                value={opening[c.key]}
+                onChange={e => setOpening(p => ({ ...p, [c.key]: e.target.value }))} />
+            </div>
+          ))}
+          <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, fontWeight:600, padding:'8px 0', borderTop:'1px solid #f0f0f0', marginTop:4 }}>
+            <span>Total opening</span><span>{fmt(totalOpening)}</span>
+          </div>
+          <button className="primary-btn" onClick={() => save('opening')} disabled={saving==='opening'}>
+            {saving==='opening' ? 'Saving…' : 'Save opening inventory'}
+          </button>
+        </div>
+
+        <div className="card">
+          <div className="card-title">Closing inventory — end of month</div>
+          {categories.map(c => (
+            <div className="field" key={c.key} style={{ marginBottom:8 }}>
+              <label>{c.label}</label>
+              <input type="number" placeholder="$0" min="0"
+                value={closing[c.key]}
+                onChange={e => setClosing(p => ({ ...p, [c.key]: e.target.value }))} />
+            </div>
+          ))}
+          <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, fontWeight:600, padding:'8px 0', borderTop:'1px solid #f0f0f0', marginTop:4 }}>
+            <span>Total closing</span><span>{fmt(totalClosing)}</span>
+          </div>
+          <button className="primary-btn" onClick={() => save('closing')} disabled={saving==='closing'}>
+            {saving==='closing' ? 'Saving…' : 'Save closing inventory'}
+          </button>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop:4 }}>
+        <div className="card-title">Real food cost calculation</div>
+        <div className="pl-line sub"><span>Opening inventory</span><span>{fmt(totalOpening)}</span></div>
+        <div className="pl-line sub"><span>+ Purchases (from expenses)</span><span>—</span></div>
+        <div className="pl-line sub"><span>− Closing inventory</span><span>{fmt(totalClosing)}</span></div>
+        <div className="pl-line total"><span>= Real food cost</span><span>{fmt(Math.max(0, totalOpening - totalClosing))}</span></div>
+      </div>
+    </div>
+  );
+}
 function AdvisorTab({ pl }) {
   const [insights, setInsights] = useState(null);
   const [loading, setLoading]   = useState(false);
@@ -441,7 +547,8 @@ export default function App() {
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'entry',     label: 'Enter data' },
     { id: 'expenses',  label: 'Expenses' },
-    { id: 'advisor',   label: 'AI advisor' },
+    { id: 'inventory', label: 'Inventory' },
+        { id: 'advisor',   label: 'AI advisor' },
   ];
 
   return (
@@ -466,6 +573,7 @@ export default function App() {
         {tab === 'dashboard' && <Dashboard pl={pl} loading={plLoading} />}
         {tab === 'entry'     && <EntryTab onSaved={loadPL} />}
         {tab === 'expenses'  && <ExpensesTab onSaved={loadPL} />}
+        {tab === 'inventory' && <InventoryTab onSaved={loadPL} />}
         {tab === 'advisor'   && <AdvisorTab pl={pl} />}
       </main>
     </div>
