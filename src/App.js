@@ -578,7 +578,7 @@ export default function App() {
 
   async function handleUpgrade(plan) {
     try {
-      const res = await API.post('/subscriptions/checkout', { plan });
+      const res = await API.get(`/subscriptions/checkout-url?plan=${plan}`);
       window.location.href = res.data.url;
     } catch (e) {
       console.error('Checkout error', e);
