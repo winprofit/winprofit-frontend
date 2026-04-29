@@ -64,7 +64,7 @@ function AuthScreen({ onLogin }) {
           </div>
           {error && <div className="error-msg">{error}</div>}
           <button className="primary-btn" type="submit" disabled={loading}>
-            {loading ? 'Please wait…' : isSignup ? 'Create account' : 'Sign in'}
+            {loading ? 'Please wait...' : isSignup ? 'Create account' : 'Sign in'}
           </button>
         </form>
         <p className="auth-toggle">
@@ -79,7 +79,7 @@ function AuthScreen({ onLogin }) {
 }
 
 function Dashboard({ pl, loading }) {
-  if (loading) return <div className="loading">Loading your P&L…</div>;
+  if (loading) return <div className="loading">Loading your P&L...</div>;
   if (!pl || pl.total_revenue === 0) return (
     <div className="empty-state">
       <div className="empty-icon">📊</div>
@@ -103,12 +103,12 @@ function Dashboard({ pl, loading }) {
         <div className="metric-card">
           <div className="metric-label">Food cost %</div>
           <div className={`metric-value ${fcStatus}`}>{pct(pl.food_cost_pct)}</div>
-          <div className={`metric-sub ${fcStatus}`}>Target: 28–32%</div>
+          <div className={`metric-sub ${fcStatus}`}>Target: 28-32%</div>
         </div>
         <div className="metric-card">
           <div className="metric-label">Labor cost %</div>
           <div className={`metric-value ${labStatus}`}>{pct(pl.labor_pct)}</div>
-          <div className={`metric-sub ${labStatus}`}>Target: 28–35%</div>
+          <div className={`metric-sub ${labStatus}`}>Target: 28-35%</div>
         </div>
         <div className="metric-card">
           <div className="metric-label">Net profit</div>
@@ -170,7 +170,7 @@ function EntryTab({ onSaved }) {
   const [saving, setSaving]   = useState(false);
   const [msg, setMsg]         = useState('');
 
-  useEffect(() => { loadEntries(); }, []);
+  useEffect(() => { loadEntries(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadEntries() {
     try {
@@ -221,7 +221,7 @@ function EntryTab({ onSaved }) {
           <div className="field"><label>Beverage sales ($)</label><input type="number" value={bev} onChange={e => setBev(e.target.value)} placeholder="e.g. 380" min="0" /></div>
         </div>
         {msg && <div className={`msg ${msg === 'Saved!' ? 'msg-ok' : 'msg-err'}`}>{msg}</div>}
-        <button className="primary-btn" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save entry'}</button>
+        <button className="primary-btn" onClick={save} disabled={saving}>{saving ? 'Saving...' : 'Save entry'}</button>
       </div>
       <div className="section-title">This month ({entries.length} entries)</div>
       {entries.length === 0
@@ -234,7 +234,7 @@ function EntryTab({ onSaved }) {
               <span>Bev: {fmt(e.beverage_sales / 100)}</span>
               <span>Covers: {e.covers}</span>
             </div>
-            <button className="del-btn" onClick={() => del(e.id)}>×</button>
+            <button className="del-btn" onClick={() => del(e.id)}>x</button>
           </div>
         ))
       }
@@ -257,7 +257,7 @@ function ExpensesTab({ onSaved }) {
     maintenance: 'Maintenance', other: 'Other'
   };
 
-  useEffect(() => { loadExpenses(); }, []);
+  useEffect(() => { loadExpenses(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadExpenses() {
     try {
@@ -307,7 +307,7 @@ function ExpensesTab({ onSaved }) {
           <div className="field"><label>Description</label><input type="text" value={desc} onChange={e => setDesc(e.target.value)} placeholder="e.g. Meat supplier" /></div>
         </div>
         {msg && <div className={`msg ${msg === 'Saved!' ? 'msg-ok' : 'msg-err'}`}>{msg}</div>}
-        <button className="primary-btn" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save expense'}</button>
+        <button className="primary-btn" onClick={save} disabled={saving}>{saving ? 'Saving...' : 'Save expense'}</button>
       </div>
       <div className="section-title">This month ({expenses.length} expenses)</div>
       {expenses.length === 0
@@ -320,20 +320,20 @@ function ExpensesTab({ onSaved }) {
               <span>{fmt(e.amount / 100)}</span>
               {e.description && <span className="list-desc">{e.description}</span>}
             </div>
-            <button className="del-btn" onClick={() => del(e.id)}>×</button>
+            <button className="del-btn" onClick={() => del(e.id)}>x</button>
           </div>
         ))
       }
     </div>
   );
 }
+
 function InventoryTab({ onSaved }) {
-  const thisMonth = () => new Date().toISOString().slice(0, 7);
-  const [month, setMonth]       = useState(thisMonth());
-  const [opening, setOpening]   = useState({ meat_seafood:'', produce:'', dairy_eggs:'', dry_goods:'', beverages:'', other:'' });
-  const [closing, setClosing]   = useState({ meat_seafood:'', produce:'', dairy_eggs:'', dry_goods:'', beverages:'', other:'' });
-  const [saving, setSaving]     = useState('');
-  const [msg, setMsg]           = useState('');
+  const [month, setMonth]     = useState(thisMonth());
+  const [opening, setOpening] = useState({ meat_seafood:'', produce:'', dairy_eggs:'', dry_goods:'', beverages:'', other:'' });
+  const [closing, setClosing] = useState({ meat_seafood:'', produce:'', dairy_eggs:'', dry_goods:'', beverages:'', other:'' });
+  const [saving, setSaving]   = useState('');
+  const [msg, setMsg]         = useState('');
 
   const categories = [
     { key: 'meat_seafood', label: 'Meat & Seafood' },
@@ -342,11 +342,9 @@ function InventoryTab({ onSaved }) {
     { key: 'dry_goods',    label: 'Dry Goods & Pantry' },
     { key: 'beverages',    label: 'Beverages' },
     { key: 'other',        label: 'Other' },
-  ];notepad src\App.js
+  ];
 
-async function loadInventory() {
-}, [month]);
-  async function loadInventory() {
+  const loadInventory = useCallback(async () => {
     try {
       const res = await API.get(`/inventory?month=${month}`);
       res.data.forEach(inv => {
@@ -356,14 +354,19 @@ async function loadInventory() {
         if (inv.type === 'closing') setClosing(vals);
       });
     } catch (e) { console.error(e); }
-  }
-// eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadInventory(); }, [month]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [month]);
+
+  useEffect(() => { loadInventory(); }, [loadInventory]);
+
   async function save(type) {
     setSaving(type); setMsg('');
     const vals = type === 'opening' ? opening : closing;
     try {
-      await API.post('/inventory', { month, type, ...Object.fromEntries(Object.entries(vals).map(([k,v]) => [k, parseFloat(v)||0])) });
+      await API.post('/inventory', {
+        month, type,
+        ...Object.fromEntries(Object.entries(vals).map(([k, v]) => [k, parseFloat(v) || 0]))
+      });
       setMsg(`${type === 'opening' ? 'Opening' : 'Closing'} inventory saved!`);
       onSaved();
       setTimeout(() => setMsg(''), 2000);
@@ -374,8 +377,8 @@ async function loadInventory() {
     }
   }
 
-  const totalOpening = Object.values(opening).reduce((s,v) => s + (parseFloat(v)||0), 0);
-  const totalClosing = Object.values(closing).reduce((s,v) => s + (parseFloat(v)||0), 0);
+  const totalOpening = Object.values(opening).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+  const totalClosing = Object.values(closing).reduce((s, v) => s + (parseFloat(v) || 0), 0);
 
   return (
     <div>
@@ -389,7 +392,7 @@ async function loadInventory() {
 
       <div className="two-col">
         <div className="card">
-          <div className="card-title">Opening inventory — start of month</div>
+          <div className="card-title">Opening inventory - start of month</div>
           {categories.map(c => (
             <div className="field" key={c.key} style={{ marginBottom:8 }}>
               <label>{c.label}</label>
@@ -401,13 +404,13 @@ async function loadInventory() {
           <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, fontWeight:600, padding:'8px 0', borderTop:'1px solid #f0f0f0', marginTop:4 }}>
             <span>Total opening</span><span>{fmt(totalOpening)}</span>
           </div>
-          <button className="primary-btn" onClick={() => save('opening')} disabled={saving==='opening'}>
-            {saving==='opening' ? 'Saving…' : 'Save opening inventory'}
+          <button className="primary-btn" onClick={() => save('opening')} disabled={saving === 'opening'}>
+            {saving === 'opening' ? 'Saving...' : 'Save opening inventory'}
           </button>
         </div>
 
         <div className="card">
-          <div className="card-title">Closing inventory — end of month</div>
+          <div className="card-title">Closing inventory - end of month</div>
           {categories.map(c => (
             <div className="field" key={c.key} style={{ marginBottom:8 }}>
               <label>{c.label}</label>
@@ -419,8 +422,8 @@ async function loadInventory() {
           <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, fontWeight:600, padding:'8px 0', borderTop:'1px solid #f0f0f0', marginTop:4 }}>
             <span>Total closing</span><span>{fmt(totalClosing)}</span>
           </div>
-          <button className="primary-btn" onClick={() => save('closing')} disabled={saving==='closing'}>
-            {saving==='closing' ? 'Saving…' : 'Save closing inventory'}
+          <button className="primary-btn" onClick={() => save('closing')} disabled={saving === 'closing'}>
+            {saving === 'closing' ? 'Saving...' : 'Save closing inventory'}
           </button>
         </div>
       </div>
@@ -428,13 +431,14 @@ async function loadInventory() {
       <div className="card" style={{ marginTop:4 }}>
         <div className="card-title">Real food cost calculation</div>
         <div className="pl-line sub"><span>Opening inventory</span><span>{fmt(totalOpening)}</span></div>
-        <div className="pl-line sub"><span>+ Purchases (from expenses)</span><span>—</span></div>
-        <div className="pl-line sub"><span>− Closing inventory</span><span>{fmt(totalClosing)}</span></div>
-        <div className="pl-line total"><span>= Real food cost</span><span>{fmt(Math.max(0, totalOpening - totalClosing))}</span></div>
+        <div className="pl-line sub"><span>+ Purchases (from expenses)</span><span>see expenses tab</span></div>
+        <div className="pl-line sub"><span>- Closing inventory</span><span>{fmt(totalClosing)}</span></div>
+        <div className="pl-line total"><span>= Inventory variance</span><span>{fmt(Math.max(0, totalOpening - totalClosing))}</span></div>
       </div>
     </div>
   );
 }
+
 function AdvisorTab({ pl }) {
   const [insights, setInsights] = useState(null);
   const [loading, setLoading]   = useState(false);
@@ -462,12 +466,12 @@ function AdvisorTab({ pl }) {
       <div className="card">
         <div className="ai-header">
           <div className="ai-dot" />
-          <div className="ai-title">AI advisor — powered by Claude</div>
+          <div className="ai-title">AI advisor - powered by Claude</div>
         </div>
         {!pl || pl.total_revenue === 0
           ? <div className="empty-state"><p>Add sales data first to get AI insights.</p></div>
           : loading
-          ? <div className="insight ins-info"><div className="ins-title">Analyzing your numbers…</div><p>Claude is reviewing your P&L data.</p></div>
+          ? <div className="insight ins-info"><div className="ins-title">Analyzing your numbers...</div><p>Claude is reviewing your P&L data.</p></div>
           : insights
           ? insights.map((ins, i) => (
             <div key={i} className={`insight ${severityClass[ins.severity] || 'ins-info'}`}>
@@ -478,18 +482,18 @@ function AdvisorTab({ pl }) {
           ))
           : <div className="insight ins-info">
               <div className="ins-title">Ready to analyze</div>
-              <p>Revenue: {fmt(pl.total_revenue)} · Food cost: {pct(pl.food_cost_pct)} · Labor: {pct(pl.labor_pct)} · Net margin: {pct(pl.net_margin_pct)}</p>
+              <p>Revenue: {fmt(pl.total_revenue)} - Food cost: {pct(pl.food_cost_pct)} - Labor: {pct(pl.labor_pct)} - Net margin: {pct(pl.net_margin_pct)}</p>
             </div>
         }
         {error && <div className="msg msg-err" style={{ marginTop: 10 }}>{error}</div>}
         {pl && pl.total_revenue > 0 && !loading && (
           <button className="secondary-btn" style={{ marginTop: 12 }} onClick={generate}>
-            {insights ? 'Regenerate insights' : 'Generate AI insights'} →
+            {insights ? 'Regenerate insights' : 'Generate AI insights'}
           </button>
         )}
       </div>
       <div className="benchmarks">
-        Benchmarks: food cost 28–32% · labor 28–35% · prime cost &lt;60% · net margin &gt;10% · bev mix 25–35%
+        Benchmarks: food cost 28-32% - labor 28-35% - prime cost less than 60% - net margin greater than 10% - bev mix 25-35%
       </div>
     </div>
   );
@@ -549,7 +553,7 @@ export default function App() {
     { id: 'entry',     label: 'Enter data' },
     { id: 'expenses',  label: 'Expenses' },
     { id: 'inventory', label: 'Inventory' },
-        { id: 'advisor',   label: 'AI advisor' },
+    { id: 'advisor',   label: 'AI advisor' },
   ];
 
   return (
