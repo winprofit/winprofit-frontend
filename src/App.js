@@ -344,8 +344,8 @@ function InventoryTab({ onSaved }) {
     { key: 'other',        label: 'Other' },
   ];
 
-  useEffect(() => { loadInventory(); }, [month]);
-
+useEffect(() => { loadInventory(); // eslint-disable-line react-hooks/exhaustive-deps
+}, [month]);
   async function loadInventory() {
     try {
       const res = await API.get(`/inventory?month=${month}`);
