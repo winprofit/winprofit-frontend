@@ -330,7 +330,7 @@ function ExpensesTab({ onSaved }) {
 
 function InventoryTab({ onSaved }) {
   const [month, setMonth]     = useState(thisMonth());
-  const [opening, setOpening] = useState({ meat_seafood:'', produce:'', dairy_eggs:'', dry_goods:'', beverages:'', other:'' });
+  const [opening, setOpening] = useState({ meat_seafood:'', produce:'', dairy_eggs:'', dry_goods:'', beverages_coffee:'', beverag
   const [closing, setClosing] = useState({ meat_seafood:'', produce:'', dairy_eggs:'', dry_goods:'', beverages:'', other:'' });
   const [saving, setSaving]   = useState('');
   const [msg, setMsg]         = useState('');
