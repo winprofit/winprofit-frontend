@@ -342,9 +342,9 @@ function InventoryTab({ onSaved }) {
     { key: 'dry_goods',    label: 'Dry Goods & Pantry' },
     { key: 'beverages',    label: 'Beverages' },
     { key: 'other',        label: 'Other' },
-  ];
+  ];notepad src\App.js
 
-useEffect(() => { loadInventory(); // eslint-disable-line react-hooks/exhaustive-deps
+async function loadInventory() {
 }, [month]);
   async function loadInventory() {
     try {
@@ -357,7 +357,8 @@ useEffect(() => { loadInventory(); // eslint-disable-line react-hooks/exhaustive
       });
     } catch (e) { console.error(e); }
   }
-
+// eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { loadInventory(); }, [month]);
   async function save(type) {
     setSaving(type); setMsg('');
     const vals = type === 'opening' ? opening : closing;
