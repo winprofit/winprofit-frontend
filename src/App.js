@@ -20,11 +20,11 @@ function statusClass(val, goodMax, warnMax) {
 }
 
 function AuthScreen({ onLogin }) {
-  const [email, setEmail]       = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSignup, setIsSignup] = useState(false);
-  const [error, setError]       = useState('');
-  const [loading, setLoading]   = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -52,7 +52,7 @@ function AuthScreen({ onLogin }) {
     <div className="auth-wrap">
       <div className="auth-card">
         <div className="brand-lg">Win<span>Profit</span></div>
-        <p className="auth-sub">Restaurant P&L & AI Advisor</p>
+        <p className="auth-sub">Restaurant P&L and AI Advisor</p>
         <form onSubmit={handleSubmit}>
           <div className="field">
             <label>Email</label>
@@ -60,7 +60,7 @@ function AuthScreen({ onLogin }) {
           </div>
           <div className="field">
             <label>Password</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" />
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="password" />
           </div>
           {error && <div className="error-msg">{error}</div>}
           <button className="primary-btn" type="submit" disabled={loading}>
@@ -88,8 +88,8 @@ function Dashboard({ pl, loading }) {
     </div>
   );
 
-  const fcStatus     = statusClass(pl.food_cost_pct, 32, 36);
-  const labStatus    = statusClass(pl.labor_pct, 35, 40);
+  const fcStatus = statusClass(pl.food_cost_pct, 32, 36);
+  const labStatus = statusClass(pl.labor_pct, 35, 40);
   const marginStatus = pl.net_margin_pct >= 10 ? 'ok' : pl.net_margin_pct >= 5 ? 'warn' : 'bad';
 
   return (
@@ -116,10 +116,9 @@ function Dashboard({ pl, loading }) {
           <div className={`metric-sub ${marginStatus}`}>Margin: {pct(pl.net_margin_pct)}</div>
         </div>
       </div>
-
       <div className="two-col">
         <div className="card">
-          <div className="card-title">P&L summary</div>
+          <div className="card-title">P and L summary</div>
           <div className="pl-line sub"><span>Food sales</span><span>{fmt(pl.food_sales)}</span></div>
           <div className="pl-line sub"><span>Beverage sales</span><span>{fmt(pl.beverage_sales)}</span></div>
           <div className="pl-line total"><span>Total revenue</span><span>{fmt(pl.total_revenue)}</span></div>
@@ -134,14 +133,13 @@ function Dashboard({ pl, loading }) {
             <span>Net profit</span><span>{fmt(pl.net_profit)}</span>
           </div>
         </div>
-
         <div className="card">
           <div className="card-title">Cost breakdown</div>
           {[
-            { label: 'Food cost',  val: pl.food_cost_pct,  color: '#E24B4A' },
-            { label: 'Labor',      val: pl.labor_pct,      color: '#378ADD' },
+            { label: 'Food cost', val: pl.food_cost_pct, color: '#E24B4A' },
+            { label: 'Labor', val: pl.labor_pct, color: '#378ADD' },
             { label: 'Prime cost', val: pl.prime_cost_pct, color: '#7F77DD' },
-            { label: 'Bev mix',    val: pl.bev_mix_pct,    color: '#1D9E75' },
+            { label: 'Bev mix', val: pl.bev_mix_pct, color: '#1D9E75' },
           ].map(({ label, val, color }) => (
             <div className="bar-row" key={label}>
               <div className="bar-label">{label}</div>
@@ -162,15 +160,15 @@ function Dashboard({ pl, loading }) {
 }
 
 function EntryTab({ onSaved }) {
-  const [date, setDate]       = useState(today());
-  const [food, setFood]       = useState('');
-  const [bev, setBev]         = useState('');
-  const [covers, setCovers]   = useState('');
+  const [date, setDate] = useState(today());
+  const [food, setFood] = useState('');
+  const [bev, setBev] = useState('');
+  const [covers, setCovers] = useState('');
   const [entries, setEntries] = useState([]);
-  const [saving, setSaving]   = useState(false);
-  const [msg, setMsg]         = useState('');
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
 
-  useEffect(() => { loadEntries(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadEntries(); }, []); // eslint-disable-line
 
   async function loadEntries() {
     try {
@@ -186,9 +184,9 @@ function EntryTab({ onSaved }) {
     try {
       await API.post('/entries', {
         date,
-        food_sales:     parseFloat(food) || 0,
-        beverage_sales: parseFloat(bev)  || 0,
-        covers:         parseInt(covers) || 0,
+        food_sales: parseFloat(food) || 0,
+        beverage_sales: parseFloat(bev) || 0,
+        covers: parseInt(covers) || 0,
       });
       setFood(''); setBev(''); setCovers('');
       setMsg('Saved!');
@@ -213,7 +211,7 @@ function EntryTab({ onSaved }) {
   return (
     <div>
       <div className="card" style={{ marginBottom: 16 }}>
-        <div className="card-title">Add / update daily sales</div>
+        <div className="card-title">Add or update daily sales</div>
         <div className="field-grid">
           <div className="field"><label>Date</label><input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
           <div className="field"><label>Covers (guests)</label><input type="number" value={covers} onChange={e => setCovers(e.target.value)} placeholder="e.g. 52" min="0" /></div>
@@ -243,13 +241,13 @@ function EntryTab({ onSaved }) {
 }
 
 function ExpensesTab({ onSaved }) {
-  const [date, setDate]         = useState(today());
+  const [date, setDate] = useState(today());
   const [category, setCategory] = useState('food_cost');
-  const [amount, setAmount]     = useState('');
-  const [desc, setDesc]         = useState('');
+  const [amount, setAmount] = useState('');
+  const [desc, setDesc] = useState('');
   const [expenses, setExpenses] = useState([]);
-  const [saving, setSaving]     = useState(false);
-  const [msg, setMsg]           = useState('');
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
 
   const catLabels = {
     food_cost: 'Food cost', beverage_cost: 'Bev cost', labor: 'Labor',
@@ -257,7 +255,7 @@ function ExpensesTab({ onSaved }) {
     maintenance: 'Maintenance', other: 'Other'
   };
 
-  useEffect(() => { loadExpenses(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadExpenses(); }, []); // eslint-disable-line
 
   async function loadExpenses() {
     try {
@@ -329,19 +327,32 @@ function ExpensesTab({ onSaved }) {
 }
 
 function InventoryTab({ onSaved }) {
-  const [month, setMonth]     = useState(thisMonth());
-  const [opening, setOpening] = useState({ meat_seafood:'', produce:'', dairy_eggs:'', dry_goods:'', beverages_coffee:'', beverag
-  const [closing, setClosing] = useState({ meat_seafood:'', produce:'', dairy_eggs:'', dry_goods:'', beverages:'', other:'' });
-  const [saving, setSaving]   = useState('');
-  const [msg, setMsg]         = useState('');
+  const emptyState = {
+    meat_seafood: '',
+    produce: '',
+    dairy_eggs: '',
+    dry_goods: '',
+    beverages_coffee: '',
+    beverages_soft_drinks: '',
+    beverages_alcohol: '',
+    other: ''
+  };
+
+  const [month, setMonth] = useState(thisMonth());
+  const [opening, setOpening] = useState(emptyState);
+  const [closing, setClosing] = useState(emptyState);
+  const [saving, setSaving] = useState('');
+  const [msg, setMsg] = useState('');
 
   const categories = [
-    { key: 'meat_seafood', label: 'Meat & Seafood' },
-    { key: 'produce',      label: 'Produce' },
-    { key: 'dairy_eggs',   label: 'Dairy & Eggs' },
-    { key: 'dry_goods',    label: 'Dry Goods & Pantry' },
-    { key: 'beverages',    label: 'Beverages' },
-    { key: 'other',        label: 'Other' },
+    { key: 'meat_seafood', label: 'Meat and Seafood' },
+    { key: 'produce', label: 'Produce' },
+    { key: 'dairy_eggs', label: 'Dairy and Eggs' },
+    { key: 'dry_goods', label: 'Dry Goods and Pantry' },
+    { key: 'beverages_coffee', label: 'Beverages - Coffee and Tea' },
+    { key: 'beverages_soft_drinks', label: 'Beverages - Soft Drinks' },
+    { key: 'beverages_alcohol', label: 'Beverages - Alcohol' },
+    { key: 'other', label: 'Other' },
   ];
 
   const loadInventory = useCallback(async () => {
@@ -349,12 +360,12 @@ function InventoryTab({ onSaved }) {
       const res = await API.get(`/inventory?month=${month}`);
       res.data.forEach(inv => {
         const vals = {};
-        categories.forEach(c => { vals[c.key] = inv[c.key] / 100; });
+        categories.forEach(c => { vals[c.key] = inv[c.key] ? inv[c.key] / 100 : ''; });
         if (inv.type === 'opening') setOpening(vals);
         if (inv.type === 'closing') setClosing(vals);
       });
     } catch (e) { console.error(e); }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line
   }, [month]);
 
   useEffect(() => { loadInventory(); }, [loadInventory]);
@@ -364,10 +375,18 @@ function InventoryTab({ onSaved }) {
     const vals = type === 'opening' ? opening : closing;
     try {
       await API.post('/inventory', {
-        month, type,
-        ...Object.fromEntries(Object.entries(vals).map(([k, v]) => [k, parseFloat(v) || 0]))
+        month,
+        type,
+        meat_seafood: parseFloat(vals.meat_seafood) || 0,
+        produce: parseFloat(vals.produce) || 0,
+        dairy_eggs: parseFloat(vals.dairy_eggs) || 0,
+        dry_goods: parseFloat(vals.dry_goods) || 0,
+        beverages_coffee: parseFloat(vals.beverages_coffee) || 0,
+        beverages_soft_drinks: parseFloat(vals.beverages_soft_drinks) || 0,
+        beverages_alcohol: parseFloat(vals.beverages_alcohol) || 0,
+        other: parseFloat(vals.other) || 0,
       });
-      setMsg(`${type === 'opening' ? 'Opening' : 'Closing'} inventory saved!`);
+      setMsg((type === 'opening' ? 'Opening' : 'Closing') + ' inventory saved!');
       onSaved();
       setTimeout(() => setMsg(''), 2000);
     } catch (e) {
@@ -382,26 +401,26 @@ function InventoryTab({ onSaved }) {
 
   return (
     <div>
-      <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
-        <div className="section-title" style={{ margin:0 }}>Inventory count</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+        <div className="section-title" style={{ margin: 0 }}>Inventory count</div>
         <input type="month" value={month} onChange={e => setMonth(e.target.value)}
-          style={{ border:'1px solid #ddd', borderRadius:8, padding:'6px 10px', fontSize:13 }} />
+          style={{ border: '1px solid #ddd', borderRadius: 8, padding: '6px 10px', fontSize: 13 }} />
       </div>
 
-      {msg && <div className={`msg ${msg.includes('Error') ? 'msg-err' : 'msg-ok'}`} style={{ marginBottom:12 }}>{msg}</div>}
+      {msg && <div className={`msg ${msg.includes('Error') ? 'msg-err' : 'msg-ok'}`} style={{ marginBottom: 12 }}>{msg}</div>}
 
       <div className="two-col">
         <div className="card">
           <div className="card-title">Opening inventory - start of month</div>
           {categories.map(c => (
-            <div className="field" key={c.key} style={{ marginBottom:8 }}>
+            <div className="field" key={c.key} style={{ marginBottom: 8 }}>
               <label>{c.label}</label>
-              <input type="number" placeholder="$0" min="0"
+              <input type="number" placeholder="0" min="0"
                 value={opening[c.key]}
                 onChange={e => setOpening(p => ({ ...p, [c.key]: e.target.value }))} />
             </div>
           ))}
-          <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, fontWeight:600, padding:'8px 0', borderTop:'1px solid #f0f0f0', marginTop:4 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600, padding: '8px 0', borderTop: '1px solid #f0f0f0', marginTop: 4 }}>
             <span>Total opening</span><span>{fmt(totalOpening)}</span>
           </div>
           <button className="primary-btn" onClick={() => save('opening')} disabled={saving === 'opening'}>
@@ -412,14 +431,14 @@ function InventoryTab({ onSaved }) {
         <div className="card">
           <div className="card-title">Closing inventory - end of month</div>
           {categories.map(c => (
-            <div className="field" key={c.key} style={{ marginBottom:8 }}>
+            <div className="field" key={c.key} style={{ marginBottom: 8 }}>
               <label>{c.label}</label>
-              <input type="number" placeholder="$0" min="0"
+              <input type="number" placeholder="0" min="0"
                 value={closing[c.key]}
                 onChange={e => setClosing(p => ({ ...p, [c.key]: e.target.value }))} />
             </div>
           ))}
-          <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, fontWeight:600, padding:'8px 0', borderTop:'1px solid #f0f0f0', marginTop:4 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600, padding: '8px 0', borderTop: '1px solid #f0f0f0', marginTop: 4 }}>
             <span>Total closing</span><span>{fmt(totalClosing)}</span>
           </div>
           <button className="primary-btn" onClick={() => save('closing')} disabled={saving === 'closing'}>
@@ -428,12 +447,12 @@ function InventoryTab({ onSaved }) {
         </div>
       </div>
 
-      <div className="card" style={{ marginTop:4 }}>
+      <div className="card" style={{ marginTop: 4 }}>
         <div className="card-title">Real food cost calculation</div>
         <div className="pl-line sub"><span>Opening inventory</span><span>{fmt(totalOpening)}</span></div>
-        <div className="pl-line sub"><span>+ Purchases (from expenses)</span><span>see expenses tab</span></div>
-        <div className="pl-line sub"><span>- Closing inventory</span><span>{fmt(totalClosing)}</span></div>
-        <div className="pl-line total"><span>= Inventory variance</span><span>{fmt(Math.max(0, totalOpening - totalClosing))}</span></div>
+        <div className="pl-line sub"><span>Plus purchases from expenses tab</span><span>--</span></div>
+        <div className="pl-line sub"><span>Minus closing inventory</span><span>{fmt(totalClosing)}</span></div>
+        <div className="pl-line total"><span>Inventory variance</span><span>{fmt(Math.max(0, totalOpening - totalClosing))}</span></div>
       </div>
     </div>
   );
@@ -441,8 +460,8 @@ function InventoryTab({ onSaved }) {
 
 function AdvisorTab({ pl }) {
   const [insights, setInsights] = useState(null);
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const severityClass = {
     good: 'ins-good', warning: 'ins-warn', critical: 'ins-bad', info: 'ins-info'
@@ -466,12 +485,12 @@ function AdvisorTab({ pl }) {
       <div className="card">
         <div className="ai-header">
           <div className="ai-dot" />
-          <div className="ai-title">AI advisor - powered by Claude</div>
+          <div className="ai-title">AI advisor powered by Claude</div>
         </div>
         {!pl || pl.total_revenue === 0
           ? <div className="empty-state"><p>Add sales data first to get AI insights.</p></div>
           : loading
-          ? <div className="insight ins-info"><div className="ins-title">Analyzing your numbers...</div><p>Claude is reviewing your P&L data.</p></div>
+          ? <div className="insight ins-info"><div className="ins-title">Analyzing your numbers...</div><p>Claude is reviewing your data.</p></div>
           : insights
           ? insights.map((ins, i) => (
             <div key={i} className={`insight ${severityClass[ins.severity] || 'ins-info'}`}>
@@ -482,7 +501,7 @@ function AdvisorTab({ pl }) {
           ))
           : <div className="insight ins-info">
               <div className="ins-title">Ready to analyze</div>
-              <p>Revenue: {fmt(pl.total_revenue)} - Food cost: {pct(pl.food_cost_pct)} - Labor: {pct(pl.labor_pct)} - Net margin: {pct(pl.net_margin_pct)}</p>
+              <p>Revenue: {fmt(pl.total_revenue)} Food cost: {pct(pl.food_cost_pct)} Labor: {pct(pl.labor_pct)} Net margin: {pct(pl.net_margin_pct)}</p>
             </div>
         }
         {error && <div className="msg msg-err" style={{ marginTop: 10 }}>{error}</div>}
@@ -493,16 +512,16 @@ function AdvisorTab({ pl }) {
         )}
       </div>
       <div className="benchmarks">
-        Benchmarks: food cost 28-32% - labor 28-35% - prime cost less than 60% - net margin greater than 10% - bev mix 25-35%
+        Benchmarks: food cost 28-32% labor 28-35% prime cost under 60% net margin over 10% bev mix 25-35%
       </div>
     </div>
   );
 }
 
 export default function App() {
-  const [session, setSession]     = useState(null);
-  const [tab, setTab]             = useState('dashboard');
-  const [pl, setPl]               = useState(null);
+  const [session, setSession] = useState(null);
+  const [tab, setTab] = useState('dashboard');
+  const [pl, setPl] = useState(null);
   const [plLoading, setPlLoading] = useState(false);
 
   useEffect(() => {
@@ -550,10 +569,10 @@ export default function App() {
 
   const tabs = [
     { id: 'dashboard', label: 'Dashboard' },
-    { id: 'entry',     label: 'Enter data' },
-    { id: 'expenses',  label: 'Expenses' },
+    { id: 'entry', label: 'Enter data' },
+    { id: 'expenses', label: 'Expenses' },
     { id: 'inventory', label: 'Inventory' },
-    { id: 'advisor',   label: 'AI advisor' },
+    { id: 'advisor', label: 'AI advisor' },
   ];
 
   return (
@@ -576,10 +595,10 @@ export default function App() {
           </span>
         </div>
         {tab === 'dashboard' && <Dashboard pl={pl} loading={plLoading} />}
-        {tab === 'entry'     && <EntryTab onSaved={loadPL} />}
-        {tab === 'expenses'  && <ExpensesTab onSaved={loadPL} />}
+        {tab === 'entry' && <EntryTab onSaved={loadPL} />}
+        {tab === 'expenses' && <ExpensesTab onSaved={loadPL} />}
         {tab === 'inventory' && <InventoryTab onSaved={loadPL} />}
-        {tab === 'advisor'   && <AdvisorTab pl={pl} />}
+        {tab === 'advisor' && <AdvisorTab pl={pl} />}
       </main>
     </div>
   );
