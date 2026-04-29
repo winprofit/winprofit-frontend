@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import API from './api';
+import Pricing from './Pricing';
 import './App.css';
 
 const supabase = createClient(
@@ -406,9 +407,7 @@ function InventoryTab({ onSaved }) {
         <input type="month" value={month} onChange={e => setMonth(e.target.value)}
           style={{ border: '1px solid #ddd', borderRadius: 8, padding: '6px 10px', fontSize: 13 }} />
       </div>
-
       {msg && <div className={`msg ${msg.includes('Error') ? 'msg-err' : 'msg-ok'}`} style={{ marginBottom: 12 }}>{msg}</div>}
-
       <div className="two-col">
         <div className="card">
           <div className="card-title">Opening inventory - start of month</div>
@@ -427,7 +426,6 @@ function InventoryTab({ onSaved }) {
             {saving === 'opening' ? 'Saving...' : 'Save opening inventory'}
           </button>
         </div>
-
         <div className="card">
           <div className="card-title">Closing inventory - end of month</div>
           {categories.map(c => (
@@ -446,7 +444,6 @@ function InventoryTab({ onSaved }) {
           </button>
         </div>
       </div>
-
       <div className="card" style={{ marginTop: 4 }}>
         <div className="card-title">Real food cost calculation</div>
         <div className="pl-line sub"><span>Opening inventory</span><span>{fmt(totalOpening)}</span></div>
@@ -523,6 +520,8 @@ export default function App() {
   const [tab, setTab] = useState('dashboard');
   const [pl, setPl] = useState(null);
   const [plLoading, setPlLoading] = useState(false);
+  const [subscription, setSubscription] = useState(null);
+  const [showPricing, setShowPricing] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -532,17 +531,18 @@ export default function App() {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         localStorage.setItem('winprofit_session', JSON.stringify(session));
         setSession(session);
       } else {
         localStorage.removeItem('winprofit_session');
         setSession(null);
+        setSubscription(null);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => authSub.unsubscribe();
   }, []);
 
   const loadPL = useCallback(async () => {
@@ -557,15 +557,41 @@ export default function App() {
     }
   }, []);
 
+  const loadSubscription = useCallback(async () => {
+    try {
+      const res = await API.get('/subscriptions/status');
+      setSubscription(res.data);
+      if (res.data.status === 'expired') {
+        setShowPricing(true);
+      }
+    } catch (e) {
+      console.error('Subscription load error', e);
+    }
+  }, []);
+
   useEffect(() => {
-    if (session) loadPL();
-  }, [session, loadPL]);
+    if (session) {
+      loadPL();
+      loadSubscription();
+    }
+  }, [session, loadPL, loadSubscription]);
+
+  async function handleUpgrade(plan) {
+    try {
+      const res = await API.post('/subscriptions/checkout', { plan });
+      window.location.href = res.data.url;
+    } catch (e) {
+      console.error('Checkout error', e);
+    }
+  }
 
   function logout() {
     supabase.auth.signOut();
+    setShowPricing(false);
   }
 
   if (!session) return <AuthScreen onLogin={setSession} />;
+  if (showPricing) return <Pricing subscription={subscription} onLogin={() => setShowPricing(false)} onUpgrade={handleUpgrade} />;
 
   const tabs = [
     { id: 'dashboard', label: 'Dashboard' },
@@ -574,6 +600,10 @@ export default function App() {
     { id: 'inventory', label: 'Inventory' },
     { id: 'advisor', label: 'AI advisor' },
   ];
+
+  const daysLeft = subscription && subscription.trial_ends_at
+    ? Math.max(0, Math.ceil((new Date(subscription.trial_ends_at) - new Date()) / (1000 * 60 * 60 * 24)))
+    : null;
 
   return (
     <div className="app-wrap">
@@ -586,13 +616,25 @@ export default function App() {
             </button>
           ))}
         </div>
-        <button className="logout-btn" onClick={logout}>Sign out</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {daysLeft !== null && daysLeft <= 7 && (
+            <button className="trial-warning" onClick={() => setShowPricing(true)}>
+              {daysLeft} days left in trial
+            </button>
+          )}
+          <button className="logout-btn" onClick={logout}>Sign out</button>
+        </div>
       </nav>
       <main className="main-content">
         <div className="month-bar">
           <span className="month-label">
             {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}
           </span>
+          {subscription && subscription.plan === 'trial' && (
+            <span className="trial-badge" onClick={() => setShowPricing(true)}>
+              Free trial - {daysLeft} days left
+            </span>
+          )}
         </div>
         {tab === 'dashboard' && <Dashboard pl={pl} loading={plLoading} />}
         {tab === 'entry' && <EntryTab onSaved={loadPL} />}
