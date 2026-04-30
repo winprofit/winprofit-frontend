@@ -20,6 +20,28 @@ function statusClass(val, goodMax, warnMax) {
   return 'bad';
 }
 
+// Popup Modal
+function Modal({ title, onClose, children }) {
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center',
+      justifyContent: 'center', zIndex: 1000
+    }}>
+      <div style={{
+        background: '#fff', borderRadius: 12, padding: 24, width: 420,
+        maxWidth: '90vw', boxShadow: '0 20px 60px rgba(0,0,0,0.2)'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a' }}>{title}</div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#888' }}>x</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function AuthScreen({ onLogin }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -168,6 +190,11 @@ function EntryTab({ onSaved }) {
   const [entries, setEntries] = useState([]);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
+  const [editEntry, setEditEntry] = useState(null);
+  const [editFood, setEditFood] = useState('');
+  const [editBev, setEditBev] = useState('');
+  const [editCovers, setEditCovers] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
 
   useEffect(() => { loadEntries(); }, []); // eslint-disable-line
 
@@ -202,6 +229,7 @@ function EntryTab({ onSaved }) {
   }
 
   async function del(id) {
+    if (!window.confirm('Delete this entry?')) return;
     try {
       await API.delete(`/entries/${id}`);
       await loadEntries();
@@ -209,8 +237,50 @@ function EntryTab({ onSaved }) {
     } catch (e) { console.error(e); }
   }
 
+  function openEdit(e) {
+    setEditEntry(e);
+    setEditFood(e.food_sales / 100);
+    setEditBev(e.beverage_sales / 100);
+    setEditCovers(e.covers);
+  }
+
+  async function saveEdit() {
+    setEditSaving(true);
+    try {
+      await API.post('/entries', {
+        date: editEntry.date,
+        food_sales: parseFloat(editFood) || 0,
+        beverage_sales: parseFloat(editBev) || 0,
+        covers: parseInt(editCovers) || 0,
+      });
+      setEditEntry(null);
+      await loadEntries();
+      onSaved();
+    } catch (e) { console.error(e); } finally {
+      setEditSaving(false);
+    }
+  }
+
   return (
     <div>
+      {editEntry && (
+        <Modal title={`Edit entry — ${editEntry.date}`} onClose={() => setEditEntry(null)}>
+          <div className="field-grid">
+            <div className="field"><label>Food sales ($)</label><input type="number" value={editFood} onChange={e => setEditFood(e.target.value)} min="0" /></div>
+            <div className="field"><label>Beverage sales ($)</label><input type="number" value={editBev} onChange={e => setEditBev(e.target.value)} min="0" /></div>
+            <div className="field"><label>Covers (guests)</label><input type="number" value={editCovers} onChange={e => setEditCovers(e.target.value)} min="0" /></div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <button className="primary-btn" onClick={saveEdit} disabled={editSaving} style={{ flex: 1 }}>
+              {editSaving ? 'Saving...' : 'Save changes'}
+            </button>
+            <button onClick={() => setEditEntry(null)} style={{ flex: 1, background: '#f5f5f5', border: '1px solid #ddd', borderRadius: 8, padding: 10, cursor: 'pointer', fontSize: 14 }}>
+              Cancel
+            </button>
+          </div>
+        </Modal>
+      )}
+
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="card-title">Add or update daily sales</div>
         <div className="field-grid">
@@ -233,7 +303,10 @@ function EntryTab({ onSaved }) {
               <span>Bev: {fmt(e.beverage_sales / 100)}</span>
               <span>Covers: {e.covers}</span>
             </div>
-            <button className="del-btn" onClick={() => del(e.id)}>x</button>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={() => openEdit(e)} style={{ background: '#E6F1FB', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, color: '#185FA5', cursor: 'pointer' }}>Edit</button>
+              <button className="del-btn" onClick={() => del(e.id)}>x</button>
+            </div>
           </div>
         ))
       }
@@ -249,6 +322,11 @@ function ExpensesTab({ onSaved }) {
   const [expenses, setExpenses] = useState([]);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
+  const [editExp, setEditExp] = useState(null);
+  const [editAmount, setEditAmount] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editCat, setEditCat] = useState('food_cost');
+  const [editSaving, setEditSaving] = useState(false);
 
   const catLabels = {
     food_cost: 'Food cost', beverage_cost: 'Bev cost', labor: 'Labor',
@@ -284,6 +362,7 @@ function ExpensesTab({ onSaved }) {
   }
 
   async function del(id) {
+    if (!window.confirm('Delete this expense?')) return;
     try {
       await API.delete(`/expenses/${id}`);
       await loadExpenses();
@@ -291,8 +370,55 @@ function ExpensesTab({ onSaved }) {
     } catch (e) { console.error(e); }
   }
 
+  function openEdit(e) {
+    setEditExp(e);
+    setEditAmount(e.amount / 100);
+    setEditDesc(e.description || '');
+    setEditCat(e.category);
+  }
+
+  async function saveEdit() {
+    setEditSaving(true);
+    try {
+      await API.delete(`/expenses/${editExp.id}`);
+      await API.post('/expenses', {
+        date: editExp.date,
+        category: editCat,
+        amount: parseFloat(editAmount) || 0,
+        description: editDesc,
+      });
+      setEditExp(null);
+      await loadExpenses();
+      onSaved();
+    } catch (e) { console.error(e); } finally {
+      setEditSaving(false);
+    }
+  }
+
   return (
     <div>
+      {editExp && (
+        <Modal title={`Edit expense — ${editExp.date}`} onClose={() => setEditExp(null)}>
+          <div className="field-grid">
+            <div className="field"><label>Category</label>
+              <select value={editCat} onChange={e => setEditCat(e.target.value)}>
+                {Object.entries(catLabels).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            </div>
+            <div className="field"><label>Amount ($)</label><input type="number" value={editAmount} onChange={e => setEditAmount(e.target.value)} min="0" /></div>
+            <div className="field" style={{ gridColumn: 'span 2' }}><label>Description</label><input type="text" value={editDesc} onChange={e => setEditDesc(e.target.value)} /></div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <button className="primary-btn" onClick={saveEdit} disabled={editSaving} style={{ flex: 1 }}>
+              {editSaving ? 'Saving...' : 'Save changes'}
+            </button>
+            <button onClick={() => setEditExp(null)} style={{ flex: 1, background: '#f5f5f5', border: '1px solid #ddd', borderRadius: 8, padding: 10, cursor: 'pointer', fontSize: 14 }}>
+              Cancel
+            </button>
+          </div>
+        </Modal>
+      )}
+
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="card-title">Log an expense</div>
         <div className="field-grid">
@@ -319,7 +445,10 @@ function ExpensesTab({ onSaved }) {
               <span>{fmt(e.amount / 100)}</span>
               {e.description && <span className="list-desc">{e.description}</span>}
             </div>
-            <button className="del-btn" onClick={() => del(e.id)}>x</button>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={() => openEdit(e)} style={{ background: '#E6F1FB', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, color: '#185FA5', cursor: 'pointer' }}>Edit</button>
+              <button className="del-btn" onClick={() => del(e.id)}>x</button>
+            </div>
           </div>
         ))
       }
@@ -329,14 +458,8 @@ function ExpensesTab({ onSaved }) {
 
 function InventoryTab({ onSaved }) {
   const emptyState = {
-    meat_seafood: '',
-    produce: '',
-    dairy_eggs: '',
-    dry_goods: '',
-    beverages_coffee: '',
-    beverages_soft_drinks: '',
-    beverages_alcohol: '',
-    other: ''
+    meat_seafood: '', produce: '', dairy_eggs: '', dry_goods: '',
+    beverages_coffee: '', beverages_soft_drinks: '', beverages_alcohol: '', other: ''
   };
 
   const [month, setMonth] = useState(thisMonth());
@@ -376,8 +499,7 @@ function InventoryTab({ onSaved }) {
     const vals = type === 'opening' ? opening : closing;
     try {
       await API.post('/inventory', {
-        month,
-        type,
+        month, type,
         meat_seafood: parseFloat(vals.meat_seafood) || 0,
         produce: parseFloat(vals.produce) || 0,
         dairy_eggs: parseFloat(vals.dairy_eggs) || 0,
