@@ -198,39 +198,55 @@ function exportExpenses(expenses, month) {
 }
 
 function exportPL(pl, inventory) {
-  const openingInv = inventory ? inventory.totalOpening : 0;
-  const closingInv = inventory ? inventory.totalClosing : 0;
-  const realFoodCost = openingInv + pl.food_cost - closingInv;
-  const realFoodCostPct = pl.food_sales > 0 ? (realFoodCost / pl.food_sales * 100).toFixed(1) : 0;
+  const foodOpening = inventory ? inventory.foodOpening : 0;
+  const foodClosing = inventory ? inventory.foodClosing : 0;
+  const bevOpening  = inventory ? inventory.bevOpening  : 0;
+  const bevClosing  = inventory ? inventory.bevClosing  : 0;
+
+  const realFoodCost = foodOpening + pl.food_cost - foodClosing;
+  const realBevCost  = bevOpening  + pl.bev_cost  - bevClosing;
+  const realFoodCostPct = pl.food_sales > 0    ? (realFoodCost / pl.food_sales * 100).toFixed(1)     : 0;
+  const realBevCostPct  = pl.beverage_sales > 0 ? (realBevCost / pl.beverage_sales * 100).toFixed(1) : 0;
+  const totalRealCost   = realFoodCost + realBevCost + pl.labor + pl.rent + pl.utilities + pl.other;
+  const realNetProfit   = pl.total_revenue - totalRealCost;
+  const realMarginPct   = pl.total_revenue > 0 ? (realNetProfit / pl.total_revenue * 100).toFixed(1) : 0;
 
   const rows = [
-    [`WinProfit — P&L Report`, '', ''],
-    [`Period: ${pl.month}`, '', ''],
-    [`Restaurant: ${pl.restaurant ? pl.restaurant.name : ''}`, '', ''],
+    ['WinProfit — P&L Report', '', ''],
+    ['Period: ' + pl.month, '', ''],
+    ['Restaurant: ' + (pl.restaurant ? pl.restaurant.name : ''), '', ''],
     ['', '', ''],
     ['SECTION', 'ITEM', 'AMOUNT ($)'],
     ['REVENUE', 'Food sales', parseFloat(pl.food_sales.toFixed(2))],
     ['', 'Beverage sales', parseFloat(pl.beverage_sales.toFixed(2))],
     ['', 'TOTAL REVENUE', parseFloat(pl.total_revenue.toFixed(2))],
     ['', '', ''],
-    ['COSTS', 'Food purchases', parseFloat(pl.food_cost.toFixed(2))],
-    ['', '+ Opening inventory', parseFloat(openingInv.toFixed(2))],
-    ['', '- Closing inventory', parseFloat(closingInv.toFixed(2))],
-    ['', 'Real food cost', parseFloat(realFoodCost.toFixed(2))],
-    ['', 'Beverage cost', parseFloat(pl.bev_cost.toFixed(2))],
-    ['', 'Labor', parseFloat(pl.labor.toFixed(2))],
+    ['FOOD COSTS', 'Food purchases', parseFloat(pl.food_cost.toFixed(2))],
+    ['', '+ Opening food inventory', parseFloat(foodOpening.toFixed(2))],
+    ['', '- Closing food inventory', parseFloat(foodClosing.toFixed(2))],
+    ['', 'REAL FOOD COST', parseFloat(realFoodCost.toFixed(2))],
+    ['', 'Real food cost %', realFoodCostPct + '%'],
+    ['', '', ''],
+    ['BEVERAGE COSTS', 'Beverage purchases', parseFloat(pl.bev_cost.toFixed(2))],
+    ['', '+ Opening bev inventory', parseFloat(bevOpening.toFixed(2))],
+    ['', '- Closing bev inventory', parseFloat(bevClosing.toFixed(2))],
+    ['', 'REAL BEVERAGE COST', parseFloat(realBevCost.toFixed(2))],
+    ['', 'Real bev cost %', realBevCostPct + '%'],
+    ['', '', ''],
+    ['OTHER COSTS', 'Labor', parseFloat(pl.labor.toFixed(2))],
     ['', 'Rent', parseFloat(pl.rent.toFixed(2))],
     ['', 'Utilities', parseFloat(pl.utilities.toFixed(2))],
     ['', 'Other', parseFloat(pl.other.toFixed(2))],
-    ['', 'TOTAL COSTS', parseFloat(pl.total_expenses.toFixed(2))],
     ['', '', ''],
-    ['PROFIT', 'NET PROFIT', parseFloat(pl.net_profit.toFixed(2))],
+    ['', 'TOTAL COSTS', parseFloat(totalRealCost.toFixed(2))],
     ['', '', ''],
-    ['RATIOS', 'Food cost % (purchases)', pl.food_cost_pct + '%'],
-    ['', 'Real food cost % (with inventory)', realFoodCostPct + '%'],
+    ['PROFIT', 'NET PROFIT (with inventory)', parseFloat(realNetProfit.toFixed(2))],
+    ['', '', ''],
+    ['RATIOS', 'Real food cost %', realFoodCostPct + '%'],
+    ['', 'Real beverage cost %', realBevCostPct + '%'],
     ['', 'Labor %', pl.labor_pct + '%'],
     ['', 'Prime cost %', pl.prime_cost_pct + '%'],
-    ['', 'Net margin %', pl.net_margin_pct + '%'],
+    ['', 'Net margin % (with inventory)', realMarginPct + '%'],
     ['', 'Beverage mix %', pl.bev_mix_pct + '%'],
     ['', 'Avg check', '$' + pl.avg_check],
     ['', 'Total covers', pl.covers],
@@ -241,22 +257,20 @@ function exportPL(pl, inventory) {
   styleSheet(ws, [22, 35, 16]);
 
   const styles = {};
-  // Title rows
   ['A1','B1','C1'].forEach(c => { styles[c] = { font: { bold: true, sz: 14, color: { rgb: '185FA5' } } }; });
-  // Header row (row 5)
   ['A5','B5','C5'].forEach(c => { styles[c] = headerStyle(); });
-  // Section labels
-  ['A6','A10','A21','A23'].forEach(c => { styles[c] = sectionStyle('0F6E56'); });
-  // Total rows
+  ['A6','A10','A16','A22','A30'].forEach(c => { styles[c] = sectionStyle('0F6E56'); });
   ['A8','B8','C8'].forEach(c => { styles[c] = totalStyle(); });
+  ['A13','B13','C13'].forEach(c => { styles[c] = totalStyle(); });
   ['A19','B19','C19'].forEach(c => { styles[c] = totalStyle(); });
-  ['A21','B21','C21'].forEach(c => { styles[c] = { font: { bold: true, sz: 12, color: { rgb: pl.net_profit >= 0 ? '27500A' : 'A32D2D' } }, fill: { fgColor: { rgb: pl.net_profit >= 0 ? 'EAF3DE' : 'FCEBEB' } } }; });
+  ['A27','B27','C27'].forEach(c => { styles[c] = totalStyle(); });
+  ['A29','B29','C29'].forEach(c => { styles[c] = { font: { bold: true, sz: 12, color: { rgb: realNetProfit >= 0 ? '27500A' : 'A32D2D' } }, fill: { fgColor: { rgb: realNetProfit >= 0 ? 'EAF3DE' : 'FCEBEB' } } }; });
   applyStyles(ws, styles);
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'P&L');
   const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellStyles: true });
-  saveAs(new Blob([buf], { type: 'application/octet-stream' }), `WinProfit_PL_${pl.month}.xlsx`);
+  saveAs(new Blob([buf], { type: 'application/octet-stream' }), 'WinProfit_PL_' + pl.month + '.xlsx');
 }
 
 function Dashboard({ pl, loading }) {
@@ -267,11 +281,16 @@ function Dashboard({ pl, loading }) {
       API.get(`/inventory?month=${pl.month}`).then(res => {
         const inv = { opening: {}, closing: {} };
         res.data.forEach(i => { inv[i.type] = i; });
-        const totalOpening = ['meat_seafood','produce','dairy_eggs','dry_goods','beverages_coffee','beverages_soft_drinks','beverages_alcohol','other']
-          .reduce((s, k) => s + ((inv.opening[k] || 0) / 100), 0);
-        const totalClosing = ['meat_seafood','produce','dairy_eggs','dry_goods','beverages_coffee','beverages_soft_drinks','beverages_alcohol','other']
-          .reduce((s, k) => s + ((inv.closing[k] || 0) / 100), 0);
-        setInventory({ totalOpening, totalClosing });
+
+        const foodKeys = ['meat_seafood','produce','dairy_eggs','dry_goods','other'];
+        const bevKeys  = ['beverages_coffee','beverages_soft_drinks','beverages_alcohol'];
+
+        const foodOpening = foodKeys.reduce((s, k) => s + ((inv.opening[k] || 0) / 100), 0);
+        const foodClosing = foodKeys.reduce((s, k) => s + ((inv.closing[k] || 0) / 100), 0);
+        const bevOpening  = bevKeys.reduce((s, k) => s + ((inv.opening[k] || 0) / 100), 0);
+        const bevClosing  = bevKeys.reduce((s, k) => s + ((inv.closing[k] || 0) / 100), 0);
+
+        setInventory({ foodOpening, foodClosing, bevOpening, bevClosing });
       }).catch(() => {});
     }
   }, [pl]); // eslint-disable-line
