@@ -504,6 +504,7 @@ function EntryTab({ onSaved }) {
 function ExpensesTab({ onSaved }) {
   const [date, setDate] = useState(today());
   const [category, setCategory] = useState('food_cost');
+  const [subcategory, setSubcategory] = useState('');
   const [amount, setAmount] = useState('');
   const [desc, setDesc] = useState('');
   const [expenses, setExpenses] = useState([]);
@@ -513,6 +514,7 @@ function ExpensesTab({ onSaved }) {
   const [editAmount, setEditAmount] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [editCat, setEditCat] = useState('food_cost');
+  const [editSubcat, setEditSubcat] = useState('');
   const [editSaving, setEditSaving] = useState(false);
 
   const catLabels = {
@@ -520,6 +522,41 @@ function ExpensesTab({ onSaved }) {
     rent: 'Rent', utilities: 'Utilities', marketing: 'Marketing',
     maintenance: 'Maintenance', other: 'Other'
   };
+
+  const foodSubcats = [
+    { value: 'meat_seafood', label: 'Meat & Seafood' },
+    { value: 'produce', label: 'Produce' },
+    { value: 'dairy_eggs', label: 'Dairy & Eggs' },
+    { value: 'dry_goods', label: 'Dry Goods & Pantry' },
+    { value: 'other_food', label: 'Other food' },
+  ];
+
+  const bevSubcats = [
+    { value: 'coffee_tea', label: 'Coffee & Tea' },
+    { value: 'soft_drinks', label: 'Soft Drinks' },
+    { value: 'alcohol', label: 'Alcohol' },
+    { value: 'other_bev', label: 'Other beverage' },
+  ];
+
+  function getSubcats(cat) {
+    if (cat === 'food_cost') return foodSubcats;
+    if (cat === 'beverage_cost') return bevSubcats;
+    return [];
+  }
+
+  function SubcatSelect({ cat, value, onChange }) {
+    const subcats = getSubcats(cat);
+    if (subcats.length === 0) return null;
+    return (
+      <div className="field">
+        <label>Subcategory</label>
+        <select value={value} onChange={e => onChange(e.target.value)}>
+          <option value="">Select subcategory...</option>
+          {subcats.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+        </select>
+      </div>
+    );
+  }
 
   useEffect(() => { loadExpenses(); }, []); // eslint-disable-line
 
@@ -536,8 +573,8 @@ function ExpensesTab({ onSaved }) {
     if (!date || !amount) { setMsg('Please enter a date and amount.'); return; }
     setSaving(true); setMsg('');
     try {
-      await API.post('/expenses', { date, category, amount: parseFloat(amount), description: desc });
-      setAmount(''); setDesc('');
+      await API.post('/expenses', { date, category, subcategory, amount: parseFloat(amount), description: desc });
+      setAmount(''); setDesc(''); setSubcategory('');
       setMsg('Saved!');
       await loadExpenses();
       onSaved();
@@ -563,6 +600,9 @@ function ExpensesTab({ onSaved }) {
     setEditAmount(e.amount / 100);
     setEditDesc(e.description || '');
     setEditCat(e.category);
+    setEditSubcat(e.subcategory || '');
+    setEditDesc(e.description || '');
+    setEditCat(e.category);
   }
 
   async function saveEdit() {
@@ -572,6 +612,7 @@ function ExpensesTab({ onSaved }) {
       await API.post('/expenses', {
         date: editExp.date,
         category: editCat,
+        subcategory: editSubcat,
         amount: parseFloat(editAmount) || 0,
         description: editDesc,
       });
@@ -589,11 +630,14 @@ function ExpensesTab({ onSaved }) {
         <Modal title={`Edit expense — ${editExp.date}`} onClose={() => setEditExp(null)}>
           <div className="field-grid">
             <div className="field"><label>Category</label>
-              <select value={editCat} onChange={e => setEditCat(e.target.value)}>
+              <select value={editCat} onChange={e => { setEditCat(e.target.value); setEditSubcat(''); }}>
                 {Object.entries(catLabels).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             </div>
             <div className="field"><label>Amount ($)</label><input type="number" value={editAmount} onChange={e => setEditAmount(e.target.value)} min="0" /></div>
+            {getSubcats(editCat).length > 0 && (
+              <SubcatSelect cat={editCat} value={editSubcat} onChange={setEditSubcat} />
+            )}
             <div className="field" style={{ gridColumn: 'span 2' }}><label>Description</label><input type="text" value={editDesc} onChange={e => setEditDesc(e.target.value)} /></div>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
@@ -612,10 +656,13 @@ function ExpensesTab({ onSaved }) {
         <div className="field-grid">
           <div className="field"><label>Date</label><input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
           <div className="field"><label>Category</label>
-            <select value={category} onChange={e => setCategory(e.target.value)}>
+            <select value={category} onChange={e => { setCategory(e.target.value); setSubcategory(''); }}>
               {Object.entries(catLabels).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
+          {getSubcats(category).length > 0 && (
+            <SubcatSelect cat={category} value={subcategory} onChange={setSubcategory} />
+          )}
           <div className="field"><label>Amount ($)</label><input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="e.g. 450" min="0" /></div>
           <div className="field"><label>Description</label><input type="text" value={desc} onChange={e => setDesc(e.target.value)} placeholder="e.g. Meat supplier" /></div>
         </div>
@@ -637,6 +684,7 @@ function ExpensesTab({ onSaved }) {
             <span className="list-date">{e.date}</span>
             <div className="list-vals">
               <span className="cat-badge">{catLabels[e.category]}</span>
+              {e.subcategory && <span className="cat-badge" style={{ background: '#E1F5EE', color: '#0F6E56' }}>{e.subcategory.replace(/_/g, ' ')}</span>}
               <span>{fmt(e.amount / 100)}</span>
               {e.description && <span className="list-desc">{e.description}</span>}
             </div>
