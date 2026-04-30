@@ -899,6 +899,63 @@ function AdvisorTab({ pl }) {
   );
 }
 
+function SettingsTab({ onSaved }) {
+  const [name, setName]       = useState('');
+  const [currency, setCurrency] = useState('USD');
+  const [saving, setSaving]   = useState(false);
+  const [msg, setMsg]         = useState('');
+
+  useEffect(() => {
+    API.get('/restaurant').then(res => {
+      setName(res.data.name || '');
+      setCurrency(res.data.currency || 'USD');
+    }).catch(() => {});
+  }, []); // eslint-disable-line
+
+  async function save() {
+    if (!name) { setMsg('Please enter a restaurant name.'); return; }
+    setSaving(true); setMsg('');
+    try {
+      await API.put('/restaurant', { name, currency });
+      setMsg('Saved!');
+      onSaved();
+      setTimeout(() => setMsg(''), 2000);
+    } catch (e) {
+      setMsg('Error saving. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div>
+      <div className="card" style={{ maxWidth: 480 }}>
+        <div className="card-title">Restaurant settings</div>
+        <div className="field" style={{ marginBottom: 12 }}>
+          <label>Restaurant name</label>
+          <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Le Petit Bistro" />
+        </div>
+        <div className="field" style={{ marginBottom: 12 }}>
+          <label>Currency</label>
+          <select value={currency} onChange={e => setCurrency(e.target.value)}>
+            <option value="USD">USD ($)</option>
+            <option value="EUR">EUR (€)</option>
+            <option value="KHR">KHR (฿)</option>
+            <option value="THB">THB (฿)</option>
+            <option value="SGD">SGD ($)</option>
+            <option value="GBP">GBP (£)</option>
+            <option value="AUD">AUD ($)</option>
+          </select>
+        </div>
+        {msg && <div className={`msg ${msg === 'Saved!' ? 'msg-ok' : 'msg-err'}`} style={{ marginBottom: 8 }}>{msg}</div>}
+        <button className="primary-btn" onClick={save} disabled={saving}>
+          {saving ? 'Saving...' : 'Save settings'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [session, setSession] = useState(null);
   const [tab, setTab] = useState('dashboard');
@@ -983,6 +1040,7 @@ export default function App() {
     { id: 'expenses', label: 'Expenses' },
     { id: 'inventory', label: 'Inventory' },
     { id: 'advisor', label: 'AI advisor' },
+    { id: 'settings', label: 'Settings' },
   ];
 
   const daysLeft = subscription && subscription.trial_ends_at
@@ -1025,6 +1083,7 @@ export default function App() {
         {tab === 'expenses' && <ExpensesTab onSaved={loadPL} />}
         {tab === 'inventory' && <InventoryTab onSaved={loadPL} />}
         {tab === 'advisor' && <AdvisorTab pl={pl} />}
+        {tab === 'settings' && <SettingsTab onSaved={loadPL} />}
       </main>
     </div>
   );
