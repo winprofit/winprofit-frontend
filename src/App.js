@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import API from './api';
 import Pricing from './Pricing';
@@ -105,7 +105,7 @@ function Dashboard({ pl, loading }) {
   if (loading) return <div className="loading">Loading your P&L...</div>;
   if (!pl || pl.total_revenue === 0) return (
     <div className="empty-state">
-      <div className="empty-icon">ðŸ“Š</div>
+      <div className="empty-icon">📊</div>
       <p>No data yet for this month.</p>
       <p>Go to <strong>Enter data</strong> to add your first sales entry.</p>
     </div>
@@ -201,7 +201,8 @@ function EntryTab({ onSaved }) {
   async function loadEntries() {
     try {
       const month = thisMonth();
-      const res = await API.get(`/entries?from=${month}-01&to=${month}-30`);
+      const lastDay = new Date(month.split("-")[0], month.split("-")[1], 0).getDate();
+      const res = await API.get(`/entries?from=${month}-01&to=${month}-${lastDay}`);
       setEntries(res.data.sort((a, b) => b.date.localeCompare(a.date)));
     } catch (e) { console.error(e); }
   }
@@ -264,7 +265,7 @@ function EntryTab({ onSaved }) {
   return (
     <div>
       {editEntry && (
-        <Modal title={`Edit entry â€” ${editEntry.date}`} onClose={() => setEditEntry(null)}>
+        <Modal title={`Edit entry — ${editEntry.date}`} onClose={() => setEditEntry(null)}>
           <div className="field-grid">
             <div className="field"><label>Food sales ($)</label><input type="number" value={editFood} onChange={e => setEditFood(e.target.value)} min="0" /></div>
             <div className="field"><label>Beverage sales ($)</label><input type="number" value={editBev} onChange={e => setEditBev(e.target.value)} min="0" /></div>
@@ -339,7 +340,8 @@ function ExpensesTab({ onSaved }) {
   async function loadExpenses() {
     try {
       const month = thisMonth();
-      const res = await API.get(`/expenses?from=${month}-01&to=${month}-30`);
+      const lastDay2 = new Date(month.split("-")[0], month.split("-")[1], 0).getDate();
+      const res = await API.get(`/expenses?from=${month}-01&to=${month}-${lastDay2}`);
       setExpenses(res.data.sort((a, b) => b.date.localeCompare(a.date)));
     } catch (e) { console.error(e); }
   }
@@ -398,7 +400,7 @@ function ExpensesTab({ onSaved }) {
   return (
     <div>
       {editExp && (
-        <Modal title={`Edit expense â€” ${editExp.date}`} onClose={() => setEditExp(null)}>
+        <Modal title={`Edit expense — ${editExp.date}`} onClose={() => setEditExp(null)}>
           <div className="field-grid">
             <div className="field"><label>Category</label>
               <select value={editCat} onChange={e => setEditCat(e.target.value)}>
