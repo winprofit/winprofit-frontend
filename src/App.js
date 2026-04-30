@@ -103,19 +103,61 @@ function AuthScreen({ onLogin }) {
   );
 }
 
+function styleSheet(ws, cols) {
+  ws['!cols'] = cols.map(w => ({ wch: w }));
+  return ws;
+}
+
+function headerStyle() {
+  return { font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 }, fill: { fgColor: { rgb: '185FA5' } }, alignment: { horizontal: 'center' } };
+}
+
+function sectionStyle(color) {
+  return { font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 }, fill: { fgColor: { rgb: color } } };
+}
+
+function totalStyle() {
+  return { font: { bold: true, sz: 11 }, fill: { fgColor: { rgb: 'E6F1FB' } }, border: { top: { style: 'thin', color: { rgb: '185FA5' } }, bottom: { style: 'thin', color: { rgb: '185FA5' } } } };
+}
+
+function applyStyles(ws, styleMap) {
+  Object.entries(styleMap).forEach(([cell, style]) => {
+    if (ws[cell]) ws[cell].s = style;
+  });
+}
+
 function exportSales(entries, month) {
-  const data = entries.map(e => ({
-    'Date': e.date,
-    'Food Sales ($)': (e.food_sales / 100).toFixed(2),
-    'Beverage Sales ($)': (e.beverage_sales / 100).toFixed(2),
-    'Total ($)': ((e.food_sales + e.beverage_sales) / 100).toFixed(2),
-    'Covers': e.covers,
-    'Avg Check ($)': e.covers > 0 ? ((e.food_sales + e.beverage_sales) / e.covers / 100).toFixed(2) : '0.00',
-  }));
-  const ws = XLSX.utils.json_to_sheet(data);
+  const headers = [['Date', 'Food Sales ($)', 'Beverage Sales ($)', 'Total ($)', 'Covers', 'Avg Check ($)']];
+  const rows = entries.sort((a, b) => a.date.localeCompare(b.date)).map(e => [
+    e.date,
+    parseFloat((e.food_sales / 100).toFixed(2)),
+    parseFloat((e.beverage_sales / 100).toFixed(2)),
+    parseFloat(((e.food_sales + e.beverage_sales) / 100).toFixed(2)),
+    e.covers,
+    e.covers > 0 ? parseFloat(((e.food_sales + e.beverage_sales) / e.covers / 100).toFixed(2)) : 0,
+  ]);
+
+  const totalFood = entries.reduce((s, e) => s + e.food_sales, 0) / 100;
+  const totalBev = entries.reduce((s, e) => s + e.beverage_sales, 0) / 100;
+  const totalRev = totalFood + totalBev;
+  const totalCovers = entries.reduce((s, e) => s + e.covers, 0);
+
+  rows.push([]);
+  rows.push(['TOTAL', parseFloat(totalFood.toFixed(2)), parseFloat(totalBev.toFixed(2)), parseFloat(totalRev.toFixed(2)), totalCovers, totalCovers > 0 ? parseFloat((totalRev / totalCovers).toFixed(2)) : 0]);
+
+  const ws = XLSX.utils.aoa_to_sheet([...headers, ...rows]);
+  styleSheet(ws, [14, 16, 18, 14, 10, 14]);
+
+  const lastRow = rows.length + 1;
+  const styles = {};
+  ['A1','B1','C1','D1','E1','F1'].forEach(c => { styles[c] = headerStyle(); });
+  [`A${lastRow+1}`,`B${lastRow+1}`,`C${lastRow+1}`,`D${lastRow+1}`,`E${lastRow+1}`,`F${lastRow+1}`].forEach(c => { styles[c] = totalStyle(); });
+  applyStyles(ws, styles);
+
+  ws['!freeze'] = { xSplit: 0, ySplit: 1 };
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Sales');
-  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellStyles: true });
   saveAs(new Blob([buf], { type: 'application/octet-stream' }), `WinProfit_Sales_${month}.xlsx`);
 }
 
@@ -125,55 +167,115 @@ function exportExpenses(expenses, month) {
     rent: 'Rent', utilities: 'Utilities', marketing: 'Marketing',
     maintenance: 'Maintenance', other: 'Other'
   };
-  const data = expenses.map(e => ({
-    'Date': e.date,
-    'Category': catLabels[e.category] || e.category,
-    'Description': e.description || '',
-    'Amount ($)': (e.amount / 100).toFixed(2),
-  }));
-  const ws = XLSX.utils.json_to_sheet(data);
+
+  const headers = [['Date', 'Category', 'Description', 'Amount ($)']];
+  const sorted = [...expenses].sort((a, b) => a.date.localeCompare(b.date));
+  const rows = sorted.map(e => [
+    e.date,
+    catLabels[e.category] || e.category,
+    e.description || '',
+    parseFloat((e.amount / 100).toFixed(2)),
+  ]);
+
+  const total = expenses.reduce((s, e) => s + e.amount, 0) / 100;
+  rows.push([]);
+  rows.push(['TOTAL', '', '', parseFloat(total.toFixed(2))]);
+
+  const ws = XLSX.utils.aoa_to_sheet([...headers, ...rows]);
+  styleSheet(ws, [14, 16, 30, 14]);
+
+  const lastRow = rows.length + 1;
+  const styles = {};
+  ['A1','B1','C1','D1'].forEach(c => { styles[c] = headerStyle(); });
+  [`A${lastRow+1}`,`B${lastRow+1}`,`C${lastRow+1}`,`D${lastRow+1}`].forEach(c => { styles[c] = totalStyle(); });
+  applyStyles(ws, styles);
+
+  ws['!freeze'] = { xSplit: 0, ySplit: 1 };
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Expenses');
-  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellStyles: true });
   saveAs(new Blob([buf], { type: 'application/octet-stream' }), `WinProfit_Expenses_${month}.xlsx`);
 }
 
-function exportPL(pl) {
-  const data = [
-    { 'Category': 'REVENUE', 'Item': '', 'Amount ($)': '' },
-    { 'Category': '', 'Item': 'Food sales', 'Amount ($)': pl.food_sales.toFixed(2) },
-    { 'Category': '', 'Item': 'Beverage sales', 'Amount ($)': pl.beverage_sales.toFixed(2) },
-    { 'Category': '', 'Item': 'TOTAL REVENUE', 'Amount ($)': pl.total_revenue.toFixed(2) },
-    { 'Category': '', 'Item': '', 'Amount ($)': '' },
-    { 'Category': 'COSTS', 'Item': '', 'Amount ($)': '' },
-    { 'Category': '', 'Item': 'Food cost', 'Amount ($)': pl.food_cost.toFixed(2) },
-    { 'Category': '', 'Item': 'Beverage cost', 'Amount ($)': pl.bev_cost.toFixed(2) },
-    { 'Category': '', 'Item': 'Labor', 'Amount ($)': pl.labor.toFixed(2) },
-    { 'Category': '', 'Item': 'Rent', 'Amount ($)': pl.rent.toFixed(2) },
-    { 'Category': '', 'Item': 'Utilities', 'Amount ($)': pl.utilities.toFixed(2) },
-    { 'Category': '', 'Item': 'Other', 'Amount ($)': pl.other.toFixed(2) },
-    { 'Category': '', 'Item': 'TOTAL COSTS', 'Amount ($)': pl.total_expenses.toFixed(2) },
-    { 'Category': '', 'Item': '', 'Amount ($)': '' },
-    { 'Category': 'PROFIT', 'Item': 'NET PROFIT', 'Amount ($)': pl.net_profit.toFixed(2) },
-    { 'Category': '', 'Item': '', 'Amount ($)': '' },
-    { 'Category': 'RATIOS', 'Item': '', 'Amount ($)': '' },
-    { 'Category': '', 'Item': 'Food cost %', 'Amount ($)': pl.food_cost_pct + '%' },
-    { 'Category': '', 'Item': 'Labor %', 'Amount ($)': pl.labor_pct + '%' },
-    { 'Category': '', 'Item': 'Prime cost %', 'Amount ($)': pl.prime_cost_pct + '%' },
-    { 'Category': '', 'Item': 'Net margin %', 'Amount ($)': pl.net_margin_pct + '%' },
-    { 'Category': '', 'Item': 'Beverage mix %', 'Amount ($)': pl.bev_mix_pct + '%' },
-    { 'Category': '', 'Item': 'Avg check', 'Amount ($)': '$' + pl.avg_check },
-    { 'Category': '', 'Item': 'Covers', 'Amount ($)': pl.covers },
-    { 'Category': '', 'Item': 'Days tracked', 'Amount ($)': pl.days_tracked },
+function exportPL(pl, inventory) {
+  const openingInv = inventory ? inventory.totalOpening : 0;
+  const closingInv = inventory ? inventory.totalClosing : 0;
+  const realFoodCost = openingInv + pl.food_cost - closingInv;
+  const realFoodCostPct = pl.food_sales > 0 ? (realFoodCost / pl.food_sales * 100).toFixed(1) : 0;
+
+  const rows = [
+    [`WinProfit — P&L Report`, '', ''],
+    [`Period: ${pl.month}`, '', ''],
+    [`Restaurant: ${pl.restaurant ? pl.restaurant.name : ''}`, '', ''],
+    ['', '', ''],
+    ['SECTION', 'ITEM', 'AMOUNT ($)'],
+    ['REVENUE', 'Food sales', parseFloat(pl.food_sales.toFixed(2))],
+    ['', 'Beverage sales', parseFloat(pl.beverage_sales.toFixed(2))],
+    ['', 'TOTAL REVENUE', parseFloat(pl.total_revenue.toFixed(2))],
+    ['', '', ''],
+    ['COSTS', 'Food purchases', parseFloat(pl.food_cost.toFixed(2))],
+    ['', '+ Opening inventory', parseFloat(openingInv.toFixed(2))],
+    ['', '- Closing inventory', parseFloat(closingInv.toFixed(2))],
+    ['', 'Real food cost', parseFloat(realFoodCost.toFixed(2))],
+    ['', 'Beverage cost', parseFloat(pl.bev_cost.toFixed(2))],
+    ['', 'Labor', parseFloat(pl.labor.toFixed(2))],
+    ['', 'Rent', parseFloat(pl.rent.toFixed(2))],
+    ['', 'Utilities', parseFloat(pl.utilities.toFixed(2))],
+    ['', 'Other', parseFloat(pl.other.toFixed(2))],
+    ['', 'TOTAL COSTS', parseFloat(pl.total_expenses.toFixed(2))],
+    ['', '', ''],
+    ['PROFIT', 'NET PROFIT', parseFloat(pl.net_profit.toFixed(2))],
+    ['', '', ''],
+    ['RATIOS', 'Food cost % (purchases)', pl.food_cost_pct + '%'],
+    ['', 'Real food cost % (with inventory)', realFoodCostPct + '%'],
+    ['', 'Labor %', pl.labor_pct + '%'],
+    ['', 'Prime cost %', pl.prime_cost_pct + '%'],
+    ['', 'Net margin %', pl.net_margin_pct + '%'],
+    ['', 'Beverage mix %', pl.bev_mix_pct + '%'],
+    ['', 'Avg check', '$' + pl.avg_check],
+    ['', 'Total covers', pl.covers],
+    ['', 'Days tracked', pl.days_tracked],
   ];
-  const ws = XLSX.utils.json_to_sheet(data);
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  styleSheet(ws, [22, 35, 16]);
+
+  const styles = {};
+  // Title rows
+  ['A1','B1','C1'].forEach(c => { styles[c] = { font: { bold: true, sz: 14, color: { rgb: '185FA5' } } }; });
+  // Header row (row 5)
+  ['A5','B5','C5'].forEach(c => { styles[c] = headerStyle(); });
+  // Section labels
+  ['A6','A10','A21','A23'].forEach(c => { styles[c] = sectionStyle('0F6E56'); });
+  // Total rows
+  ['A8','B8','C8'].forEach(c => { styles[c] = totalStyle(); });
+  ['A19','B19','C19'].forEach(c => { styles[c] = totalStyle(); });
+  ['A21','B21','C21'].forEach(c => { styles[c] = { font: { bold: true, sz: 12, color: { rgb: pl.net_profit >= 0 ? '27500A' : 'A32D2D' } }, fill: { fgColor: { rgb: pl.net_profit >= 0 ? 'EAF3DE' : 'FCEBEB' } } }; });
+  applyStyles(ws, styles);
+
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'P&L');
-  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellStyles: true });
   saveAs(new Blob([buf], { type: 'application/octet-stream' }), `WinProfit_PL_${pl.month}.xlsx`);
 }
 
 function Dashboard({ pl, loading }) {
+  const [inventory, setInventory] = useState(null);
+
+  useEffect(() => {
+    if (pl && pl.month) {
+      API.get(`/inventory?month=${pl.month}`).then(res => {
+        const inv = { opening: {}, closing: {} };
+        res.data.forEach(i => { inv[i.type] = i; });
+        const totalOpening = ['meat_seafood','produce','dairy_eggs','dry_goods','beverages_coffee','beverages_soft_drinks','beverages_alcohol','other']
+          .reduce((s, k) => s + ((inv.opening[k] || 0) / 100), 0);
+        const totalClosing = ['meat_seafood','produce','dairy_eggs','dry_goods','beverages_coffee','beverages_soft_drinks','beverages_alcohol','other']
+          .reduce((s, k) => s + ((inv.closing[k] || 0) / 100), 0);
+        setInventory({ totalOpening, totalClosing });
+      }).catch(() => {});
+    }
+  }, [pl]); // eslint-disable-line
+
   if (loading) return <div className="loading">Loading your P&L...</div>;
   if (!pl || pl.total_revenue === 0) return (
     <div className="empty-state">
@@ -251,7 +353,7 @@ function Dashboard({ pl, loading }) {
         </div>
       </div>
       <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
-        <button className="secondary-btn" onClick={() => exportPL(pl)} style={{ flex: 1 }}>
+        <button className="secondary-btn" onClick={() => exportPL(pl, inventory)} style={{ flex: 1 }}>
           Download P&L report (Excel)
         </button>
       </div>
