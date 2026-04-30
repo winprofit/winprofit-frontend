@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import API from './api';
 import Pricing from './Pricing';
 import './App.css';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
 const supabase = createClient(
   process.env.REACT_APP_SUPABASE_URL,
@@ -101,6 +103,76 @@ function AuthScreen({ onLogin }) {
   );
 }
 
+function exportSales(entries, month) {
+  const data = entries.map(e => ({
+    'Date': e.date,
+    'Food Sales ($)': (e.food_sales / 100).toFixed(2),
+    'Beverage Sales ($)': (e.beverage_sales / 100).toFixed(2),
+    'Total ($)': ((e.food_sales + e.beverage_sales) / 100).toFixed(2),
+    'Covers': e.covers,
+    'Avg Check ($)': e.covers > 0 ? ((e.food_sales + e.beverage_sales) / e.covers / 100).toFixed(2) : '0.00',
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sales');
+  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  saveAs(new Blob([buf], { type: 'application/octet-stream' }), `WinProfit_Sales_${month}.xlsx`);
+}
+
+function exportExpenses(expenses, month) {
+  const catLabels = {
+    food_cost: 'Food cost', beverage_cost: 'Bev cost', labor: 'Labor',
+    rent: 'Rent', utilities: 'Utilities', marketing: 'Marketing',
+    maintenance: 'Maintenance', other: 'Other'
+  };
+  const data = expenses.map(e => ({
+    'Date': e.date,
+    'Category': catLabels[e.category] || e.category,
+    'Description': e.description || '',
+    'Amount ($)': (e.amount / 100).toFixed(2),
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Expenses');
+  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  saveAs(new Blob([buf], { type: 'application/octet-stream' }), `WinProfit_Expenses_${month}.xlsx`);
+}
+
+function exportPL(pl) {
+  const data = [
+    { 'Category': 'REVENUE', 'Item': '', 'Amount ($)': '' },
+    { 'Category': '', 'Item': 'Food sales', 'Amount ($)': pl.food_sales.toFixed(2) },
+    { 'Category': '', 'Item': 'Beverage sales', 'Amount ($)': pl.beverage_sales.toFixed(2) },
+    { 'Category': '', 'Item': 'TOTAL REVENUE', 'Amount ($)': pl.total_revenue.toFixed(2) },
+    { 'Category': '', 'Item': '', 'Amount ($)': '' },
+    { 'Category': 'COSTS', 'Item': '', 'Amount ($)': '' },
+    { 'Category': '', 'Item': 'Food cost', 'Amount ($)': pl.food_cost.toFixed(2) },
+    { 'Category': '', 'Item': 'Beverage cost', 'Amount ($)': pl.bev_cost.toFixed(2) },
+    { 'Category': '', 'Item': 'Labor', 'Amount ($)': pl.labor.toFixed(2) },
+    { 'Category': '', 'Item': 'Rent', 'Amount ($)': pl.rent.toFixed(2) },
+    { 'Category': '', 'Item': 'Utilities', 'Amount ($)': pl.utilities.toFixed(2) },
+    { 'Category': '', 'Item': 'Other', 'Amount ($)': pl.other.toFixed(2) },
+    { 'Category': '', 'Item': 'TOTAL COSTS', 'Amount ($)': pl.total_expenses.toFixed(2) },
+    { 'Category': '', 'Item': '', 'Amount ($)': '' },
+    { 'Category': 'PROFIT', 'Item': 'NET PROFIT', 'Amount ($)': pl.net_profit.toFixed(2) },
+    { 'Category': '', 'Item': '', 'Amount ($)': '' },
+    { 'Category': 'RATIOS', 'Item': '', 'Amount ($)': '' },
+    { 'Category': '', 'Item': 'Food cost %', 'Amount ($)': pl.food_cost_pct + '%' },
+    { 'Category': '', 'Item': 'Labor %', 'Amount ($)': pl.labor_pct + '%' },
+    { 'Category': '', 'Item': 'Prime cost %', 'Amount ($)': pl.prime_cost_pct + '%' },
+    { 'Category': '', 'Item': 'Net margin %', 'Amount ($)': pl.net_margin_pct + '%' },
+    { 'Category': '', 'Item': 'Beverage mix %', 'Amount ($)': pl.bev_mix_pct + '%' },
+    { 'Category': '', 'Item': 'Avg check', 'Amount ($)': '$' + pl.avg_check },
+    { 'Category': '', 'Item': 'Covers', 'Amount ($)': pl.covers },
+    { 'Category': '', 'Item': 'Days tracked', 'Amount ($)': pl.days_tracked },
+  ];
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'P&L');
+  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  saveAs(new Blob([buf], { type: 'application/octet-stream' }), `WinProfit_PL_${pl.month}.xlsx`);
+}
+
 function Dashboard({ pl, loading }) {
   if (loading) return <div className="loading">Loading your P&L...</div>;
   if (!pl || pl.total_revenue === 0) return (
@@ -177,6 +249,11 @@ function Dashboard({ pl, loading }) {
             <div className="stat-row"><span>Total covers</span><span>{pl.covers}</span></div>
           </div>
         </div>
+      </div>
+      <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+        <button className="secondary-btn" onClick={() => exportPL(pl)} style={{ flex: 1 }}>
+          Download P&L report (Excel)
+        </button>
       </div>
     </div>
   );
@@ -293,7 +370,14 @@ function EntryTab({ onSaved }) {
         {msg && <div className={`msg ${msg === 'Saved!' ? 'msg-ok' : 'msg-err'}`}>{msg}</div>}
         <button className="primary-btn" onClick={save} disabled={saving}>{saving ? 'Saving...' : 'Save entry'}</button>
       </div>
-      <div className="section-title">This month ({entries.length} entries)</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <div className="section-title" style={{ margin: 0 }}>This month ({entries.length} entries)</div>
+        {entries.length > 0 && (
+          <button onClick={() => exportSales(entries, thisMonth())} style={{ background: '#E6F1FB', border: 'none', borderRadius: 6, padding: '6px 12px', fontSize: 12, color: '#185FA5', cursor: 'pointer' }}>
+            Download Excel
+          </button>
+        )}
+      </div>
       {entries.length === 0
         ? <div className="empty-state"><p>No entries yet this month.</p></div>
         : entries.map(e => (
@@ -436,7 +520,14 @@ function ExpensesTab({ onSaved }) {
         {msg && <div className={`msg ${msg === 'Saved!' ? 'msg-ok' : 'msg-err'}`}>{msg}</div>}
         <button className="primary-btn" onClick={save} disabled={saving}>{saving ? 'Saving...' : 'Save expense'}</button>
       </div>
-      <div className="section-title">This month ({expenses.length} expenses)</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <div className="section-title" style={{ margin: 0 }}>This month ({expenses.length} expenses)</div>
+        {expenses.length > 0 && (
+          <button onClick={() => exportExpenses(expenses, thisMonth())} style={{ background: '#E6F1FB', border: 'none', borderRadius: 6, padding: '6px 12px', fontSize: 12, color: '#185FA5', cursor: 'pointer' }}>
+            Download Excel
+          </button>
+        )}
+      </div>
       {expenses.length === 0
         ? <div className="empty-state"><p>No expenses logged yet.</p></div>
         : expenses.map(e => (
