@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import API from './api';
 import Pricing from './Pricing';
+import Onboarding from './Onboarding';
 import './App.css';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
@@ -278,6 +279,7 @@ function Dashboard({ pl, plCompare, compareMode, loading }) {
   const [inventory, setInventory] = useState(null);
   const [dailyData, setDailyData] = useState([]);
   const [trendData, setTrendData] = useState([]);
+  const [restaurant, setRestaurant] = useState(null);
 
   function changePct(current, previous) {
     if (!previous || previous === 0) return null;
@@ -304,9 +306,32 @@ function Dashboard({ pl, plCompare, compareMode, loading }) {
   const compareLabel = compareMode === 'prev_month' ? 'vs prev month' : 'vs last year';
   const hasCompare = plCompare && plCompare.total_revenue > 0;
 
+  // Weekly target calculation
+  function getWeekRevenue(daily) {
+    if (!daily || daily.length === 0) return 0;
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    return daily
+      .filter(d => new Date(d.date) >= startOfWeek)
+      .reduce((s, d) => s + d.food_sales + d.beverage_sales, 0);
+  }
+
+  // Best/worst day calculation
+  function getBestWorstDays(daily) {
+    if (!daily || daily.length === 0) return null;
+    const withTotal = daily.map(d => ({ ...d, total: d.food_sales + d.beverage_sales }));
+    const best = withTotal.reduce((a, b) => a.total > b.total ? a : b);
+    const worst = withTotal.reduce((a, b) => a.total < b.total ? a : b);
+    const busiest = withTotal.reduce((a, b) => (a.covers || 0) > (b.covers || 0) ? a : b);
+    return { best, worst, busiest };
+  }
+
   useEffect(() => {
+    API.get('/restaurant').then(res => setRestaurant(res.data)).catch(() => {});
+
     if (pl && pl.month) {
-      // Load inventory
       API.get(`/inventory?month=${pl.month}`).then(res => {
         const inv = { opening: {}, closing: {} };
         res.data.forEach(i => { inv[i.type] = i; });
@@ -319,14 +344,13 @@ function Dashboard({ pl, plCompare, compareMode, loading }) {
         setInventory({ foodOpening, foodClosing, bevOpening, bevClosing });
       }).catch(() => {});
 
-      // Build daily chart data from pl.daily
       if (pl.daily && pl.daily.length > 0) {
         const compareDaily = plCompare && plCompare.daily ? plCompare.daily : [];
         const data = pl.daily.map(d => {
           const day = parseInt(d.date.split('-')[2]);
           const compareDay = compareDaily.find(c => parseInt(c.date.split('-')[2]) === day);
           return {
-            day: day,
+            day,
             Food: parseFloat(d.food_sales.toFixed(0)),
             Beverage: parseFloat(d.beverage_sales.toFixed(0)),
             'Last period': compareDay ? parseFloat((compareDay.food_sales + compareDay.beverage_sales).toFixed(0)) : null,
@@ -335,7 +359,6 @@ function Dashboard({ pl, plCompare, compareMode, loading }) {
         setDailyData(data);
       }
 
-      // Load 6-month trend
       const months = [];
       const [y, m] = pl.month.split('-').map(Number);
       for (let i = 5; i >= 0; i--) {
@@ -366,8 +389,87 @@ function Dashboard({ pl, plCompare, compareMode, loading }) {
   const labStatus = statusClass(pl.labor_pct, 35, 40);
   const marginStatus = pl.net_margin_pct >= 10 ? 'ok' : pl.net_margin_pct >= 5 ? 'warn' : 'bad';
 
+  const alertThreshold = restaurant ? parseFloat(restaurant.food_cost_alert_pct) || 35 : 35;
+  const weeklyTarget = restaurant ? (restaurant.weekly_revenue_target || 0) / 100 : 0;
+  const weekRevenue = getWeekRevenue(pl.daily);
+  const weekPct = weeklyTarget > 0 ? Math.min(100, (weekRevenue / weeklyTarget) * 100) : 0;
+  const days = getBestWorstDays(pl.daily);
+
   return (
     <div>
+      {pl.food_cost_pct > alertThreshold && (
+        <div style={{
+          background: '#FCEBEB', border: '1px solid #E24B4A', borderRadius: 10,
+          padding: '12px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10
+        }}>
+          <span style={{ fontSize: 20 }}>⚠️</span>
+          <div>
+            <div style={{ fontWeight: 600, color: '#A32D2D', fontSize: 14 }}>
+              Food cost alert — {pl.food_cost_pct.toFixed(1)}% (threshold: {alertThreshold}%)
+            </div>
+            <div style={{ fontSize: 12, color: '#c0392b', marginTop: 2 }}>
+              Your food cost is {(pl.food_cost_pct - alertThreshold).toFixed(1)}% above your target. Check your purchases and inventory.
+            </div>
+          </div>
+        </div>
+      )}
+      {pl.food_cost_pct > alertThreshold - 2 && pl.food_cost_pct <= alertThreshold && (
+        <div style={{
+          background: '#FAEEDA', border: '1px solid #EF9F27', borderRadius: 10,
+          padding: '12px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10
+        }}>
+          <span style={{ fontSize: 20 }}>⚡</span>
+          <div>
+            <div style={{ fontWeight: 600, color: '#854F0B', fontSize: 14 }}>
+              Food cost approaching threshold — {pl.food_cost_pct.toFixed(1)}%
+            </div>
+            <div style={{ fontSize: 12, color: '#9a5e0a', marginTop: 2 }}>
+              Getting close to your {alertThreshold}% alert threshold. Keep an eye on purchases.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {weeklyTarget > 0 && (
+        <div className="card" style={{ marginBottom: 14, padding: '14px 18px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>Weekly revenue target</div>
+            <div style={{ fontSize: 13, color: '#666' }}>
+              {fmt(weekRevenue)} <span style={{ color: '#aaa' }}>/ {fmt(weeklyTarget)}</span>
+            </div>
+          </div>
+          <div style={{ height: 8, background: '#f0f0f0', borderRadius: 4 }}>
+            <div style={{
+              height: '100%', borderRadius: 4,
+              background: weekPct >= 100 ? '#1D9E75' : weekPct >= 60 ? '#EF9F27' : '#E24B4A',
+              width: `${weekPct}%`, transition: 'width 0.5s ease'
+            }} />
+          </div>
+          <div style={{ fontSize: 11, color: '#aaa', marginTop: 6 }}>
+            {weekPct >= 100 ? '🎉 Target reached this week!' : `${weekPct.toFixed(0)}% of weekly target — ${fmt(weeklyTarget - weekRevenue)} to go`}
+          </div>
+        </div>
+      )}
+
+      {days && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 14 }}>
+          <div className="metric-card" style={{ background: '#EAF3DE' }}>
+            <div className="metric-label">🏆 Best day</div>
+            <div className="metric-value" style={{ fontSize: 18, color: '#27500A' }}>{fmt(days.best.total)}</div>
+            <div className="metric-sub">{days.best.date}</div>
+          </div>
+          <div className="metric-card" style={{ background: '#FCEBEB' }}>
+            <div className="metric-label">📉 Worst day</div>
+            <div className="metric-value" style={{ fontSize: 18, color: '#A32D2D' }}>{fmt(days.worst.total)}</div>
+            <div className="metric-sub">{days.worst.date}</div>
+          </div>
+          <div className="metric-card" style={{ background: '#E6F1FB' }}>
+            <div className="metric-label">👥 Busiest day</div>
+            <div className="metric-value" style={{ fontSize: 18, color: '#185FA5' }}>{days.busiest.covers || 0} covers</div>
+            <div className="metric-sub">{days.busiest.date}</div>
+          </div>
+        </div>
+      )}
       <div className="metrics-grid">
         <div className="metric-card">
           <div className="metric-label">Total revenue</div>
@@ -1091,15 +1193,19 @@ function AdvisorTab({ pl }) {
 }
 
 function SettingsTab({ onSaved }) {
-  const [name, setName]       = useState('');
+  const [name, setName] = useState('');
   const [currency, setCurrency] = useState('USD');
-  const [saving, setSaving]   = useState(false);
-  const [msg, setMsg]         = useState('');
+  const [weeklyTarget, setWeeklyTarget] = useState('');
+  const [foodCostAlert, setFoodCostAlert] = useState('35');
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
 
   useEffect(() => {
     API.get('/restaurant').then(res => {
       setName(res.data.name || '');
       setCurrency(res.data.currency || 'USD');
+      setWeeklyTarget(res.data.weekly_revenue_target ? res.data.weekly_revenue_target / 100 : '');
+      setFoodCostAlert(res.data.food_cost_alert_pct || '35');
     }).catch(() => {});
   }, []); // eslint-disable-line
 
@@ -1107,7 +1213,12 @@ function SettingsTab({ onSaved }) {
     if (!name) { setMsg('Please enter a restaurant name.'); return; }
     setSaving(true); setMsg('');
     try {
-      await API.put('/restaurant', { name, currency });
+      await API.put('/restaurant', {
+        name,
+        currency,
+        weekly_revenue_target: Math.round((parseFloat(weeklyTarget) || 0) * 100),
+        food_cost_alert_pct: parseFloat(foodCostAlert) || 35,
+      });
       setMsg('Saved!');
       onSaved();
       setTimeout(() => setMsg(''), 2000);
@@ -1138,6 +1249,17 @@ function SettingsTab({ onSaved }) {
             <option value="AUD">AUD ($)</option>
           </select>
         </div>
+        <div className="card-title" style={{ marginTop: 20, marginBottom: 12, fontSize: 13, color: '#888' }}>TARGETS AND ALERTS</div>
+        <div className="field" style={{ marginBottom: 12 }}>
+          <label>Weekly revenue target ($)</label>
+          <input type="number" value={weeklyTarget} onChange={e => setWeeklyTarget(e.target.value)} placeholder="e.g. 5000" min="0" />
+          <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>Shows a progress bar on your dashboard each week</div>
+        </div>
+        <div className="field" style={{ marginBottom: 12 }}>
+          <label>Food cost alert threshold (%)</label>
+          <input type="number" value={foodCostAlert} onChange={e => setFoodCostAlert(e.target.value)} placeholder="e.g. 35" min="0" max="100" />
+          <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>Shows a warning when food cost % exceeds this number</div>
+        </div>
         {msg && <div className={`msg ${msg === 'Saved!' ? 'msg-ok' : 'msg-err'}`} style={{ marginBottom: 8 }}>{msg}</div>}
         <button className="primary-btn" onClick={save} disabled={saving}>
           {saving ? 'Saving...' : 'Save settings'}
@@ -1167,12 +1289,15 @@ export default function App() {
   const [plLoading, setPlLoading] = useState(false);
   const [subscription, setSubscription] = useState(null);
   const [showPricing, setShowPricing] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         localStorage.setItem('winprofit_session', JSON.stringify(session));
         setSession(session);
+        const completed = localStorage.getItem('onboarding_complete_' + session.user.id);
+        if (!completed) setShowOnboarding(true);
       }
     });
 
@@ -1180,6 +1305,8 @@ export default function App() {
       if (session) {
         localStorage.setItem('winprofit_session', JSON.stringify(session));
         setSession(session);
+        const completed = localStorage.getItem('onboarding_complete_' + session.user.id);
+        if (!completed) setShowOnboarding(true);
       } else {
         localStorage.removeItem('winprofit_session');
         setSession(null);
@@ -1194,14 +1321,12 @@ export default function App() {
     const m = month || selectedMonth;
     const cm = mode || compareMode;
     const compareM = getCompareMonth(m, cm);
-    console.log('Loading PL:', m, 'compare:', compareM);
     setPlLoading(true);
     try {
       const [mainRes, compareRes] = await Promise.all([
         API.get(`/pl?month=${m}`),
         API.get(`/pl?month=${compareM}`),
       ]);
-      console.log('Main revenue:', mainRes.data.total_revenue, 'Compare revenue:', compareRes.data.total_revenue);
       setPl(mainRes.data);
       setPlCompare(compareRes.data);
     } catch (e) {
@@ -1239,12 +1364,22 @@ export default function App() {
     }
   }
 
+  function handleOnboardingComplete() {
+    if (session) {
+      localStorage.setItem('onboarding_complete_' + session.user.id, '1');
+    }
+    setShowOnboarding(false);
+    loadPL(selectedMonth, compareMode);
+  }
+
   function logout() {
     supabase.auth.signOut();
     setShowPricing(false);
+    setShowOnboarding(false);
   }
 
   if (!session) return <AuthScreen onLogin={setSession} />;
+  if (showOnboarding) return <Onboarding onComplete={handleOnboardingComplete} />;
   if (showPricing) return <Pricing subscription={subscription} onLogin={() => setShowPricing(false)} onUpgrade={handleUpgrade} />;
 
   const tabs = [
