@@ -1017,9 +1017,8 @@ function SettingsTab({ onSaved }) {
 function getCompareMonth(month, mode) {
   const [y, m] = month.split('-').map(Number);
   if (mode === 'prev_month') {
-    const d = new Date(y, m - 1, 1);
-    d.setMonth(d.getMonth() - 1);
-    return d.toISOString().slice(0, 7);
+    if (m === 1) return `${y - 1}-12`;
+    return `${y}-${String(m - 1).padStart(2, '0')}`;
   } else {
     return `${y - 1}-${String(m).padStart(2, '0')}`;
   }
