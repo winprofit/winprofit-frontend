@@ -1060,12 +1060,15 @@ export default function App() {
   const loadPL = useCallback(async (month, mode) => {
     const m = month || selectedMonth;
     const cm = mode || compareMode;
+    const compareM = getCompareMonth(m, cm);
+    console.log('Loading PL:', m, 'compare:', compareM);
     setPlLoading(true);
     try {
       const [mainRes, compareRes] = await Promise.all([
         API.get(`/pl?month=${m}`),
-        API.get(`/pl?month=${getCompareMonth(m, cm)}`),
+        API.get(`/pl?month=${compareM}`),
       ]);
+      console.log('Main revenue:', mainRes.data.total_revenue, 'Compare revenue:', compareRes.data.total_revenue);
       setPl(mainRes.data);
       setPlCompare(compareRes.data);
     } catch (e) {
