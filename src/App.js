@@ -1014,6 +1014,17 @@ function SettingsTab({ onSaved }) {
   );
 }
 
+function getCompareMonth(month, mode) {
+  const [y, m] = month.split('-').map(Number);
+  if (mode === 'prev_month') {
+    const d = new Date(y, m - 1, 1);
+    d.setMonth(d.getMonth() - 1);
+    return d.toISOString().slice(0, 7);
+  } else {
+    return `${y - 1}-${String(m).padStart(2, '0')}`;
+  }
+}
+
 export default function App() {
   const [session, setSession] = useState(null);
   const [tab, setTab] = useState('dashboard');
@@ -1046,17 +1057,6 @@ export default function App() {
 
     return () => authSub.unsubscribe();
   }, []);
-
-  function getCompareMonth(month, mode) {
-    const [y, m] = month.split('-').map(Number);
-    if (mode === 'prev_month') {
-      const d = new Date(y, m - 1, 1);
-      d.setMonth(d.getMonth() - 1);
-      return d.toISOString().slice(0, 7);
-    } else {
-      return `${y - 1}-${String(m).padStart(2, '0')}`;
-    }
-  }
 
   const loadPL = useCallback(async (month, mode) => {
     const m = month || selectedMonth;
