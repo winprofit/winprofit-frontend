@@ -273,8 +273,33 @@ function exportPL(pl, inventory) {
   saveAs(new Blob([buf], { type: 'application/octet-stream' }), 'WinProfit_PL_' + pl.month + '.xlsx');
 }
 
-function Dashboard({ pl, loading }) {
+function Dashboard({ pl, plCompare, compareMode, loading }) {
   const [inventory, setInventory] = useState(null);
+
+  function changePct(current, previous) {
+    if (!previous || previous === 0) return null;
+    return ((current - previous) / Math.abs(previous) * 100).toFixed(1);
+  }
+
+  function ChangeTag({ current, previous, inverse = false }) {
+    const chg = changePct(current, previous);
+    if (chg === null) return null;
+    const isPositive = parseFloat(chg) > 0;
+    const isGood = inverse ? !isPositive : isPositive;
+    return (
+      <span style={{
+        fontSize: 11, fontWeight: 600, marginLeft: 6,
+        color: isGood ? '#27500A' : '#A32D2D',
+        background: isGood ? '#EAF3DE' : '#FCEBEB',
+        padding: '2px 6px', borderRadius: 10,
+      }}>
+        {isPositive ? '↑' : '↓'} {Math.abs(chg)}%
+      </span>
+    );
+  }
+
+  const compareLabel = compareMode === 'prev_month' ? 'vs prev month' : 'vs last year';
+  const hasCompare = plCompare && plCompare.total_revenue > 0;
 
   useEffect(() => {
     if (pl && pl.month) {
@@ -313,40 +338,71 @@ function Dashboard({ pl, loading }) {
       <div className="metrics-grid">
         <div className="metric-card">
           <div className="metric-label">Total revenue</div>
-          <div className="metric-value">{fmt(pl.total_revenue)}</div>
-          <div className="metric-sub">{pl.days_tracked} days tracked</div>
+          <div className="metric-value" style={{ display: 'flex', alignItems: 'center' }}>
+            {fmt(pl.total_revenue)}
+            {hasCompare && <ChangeTag current={pl.total_revenue} previous={plCompare.total_revenue} />}
+          </div>
+          <div className="metric-sub">
+            {pl.days_tracked} days tracked
+            {hasCompare && <span style={{ marginLeft: 6, color: '#aaa' }}>{compareLabel}: {fmt(plCompare.total_revenue)}</span>}
+          </div>
         </div>
         <div className="metric-card">
           <div className="metric-label">Food cost %</div>
-          <div className={`metric-value ${fcStatus}`}>{pct(pl.food_cost_pct)}</div>
-          <div className={`metric-sub ${fcStatus}`}>Target: 28-32%</div>
+          <div className={`metric-value ${fcStatus}`} style={{ display: 'flex', alignItems: 'center' }}>
+            {pct(pl.food_cost_pct)}
+            {hasCompare && <ChangeTag current={pl.food_cost_pct} previous={plCompare.food_cost_pct} inverse={true} />}
+          </div>
+          <div className={`metric-sub ${fcStatus}`}>
+            Target: 28-32%
+            {hasCompare && <span style={{ marginLeft: 6, color: '#aaa' }}>{compareLabel}: {pct(plCompare.food_cost_pct)}</span>}
+          </div>
         </div>
         <div className="metric-card">
           <div className="metric-label">Labor cost %</div>
-          <div className={`metric-value ${labStatus}`}>{pct(pl.labor_pct)}</div>
-          <div className={`metric-sub ${labStatus}`}>Target: 28-35%</div>
+          <div className={`metric-value ${labStatus}`} style={{ display: 'flex', alignItems: 'center' }}>
+            {pct(pl.labor_pct)}
+            {hasCompare && <ChangeTag current={pl.labor_pct} previous={plCompare.labor_pct} inverse={true} />}
+          </div>
+          <div className={`metric-sub ${labStatus}`}>
+            Target: 28-35%
+            {hasCompare && <span style={{ marginLeft: 6, color: '#aaa' }}>{compareLabel}: {pct(plCompare.labor_pct)}</span>}
+          </div>
         </div>
         <div className="metric-card">
           <div className="metric-label">Net profit</div>
-          <div className={`metric-value ${marginStatus}`}>{fmt(pl.net_profit)}</div>
-          <div className={`metric-sub ${marginStatus}`}>Margin: {pct(pl.net_margin_pct)}</div>
+          <div className={`metric-value ${marginStatus}`} style={{ display: 'flex', alignItems: 'center' }}>
+            {fmt(pl.net_profit)}
+            {hasCompare && <ChangeTag current={pl.net_profit} previous={plCompare.net_profit} />}
+          </div>
+          <div className={`metric-sub ${marginStatus}`}>
+            Margin: {pct(pl.net_margin_pct)}
+            {hasCompare && <span style={{ marginLeft: 6, color: '#aaa' }}>{compareLabel}: {pct(plCompare.net_margin_pct)}</span>}
+          </div>
         </div>
       </div>
       <div className="two-col">
         <div className="card">
-          <div className="card-title">P and L summary</div>
-          <div className="pl-line sub"><span>Food sales</span><span>{fmt(pl.food_sales)}</span></div>
-          <div className="pl-line sub"><span>Beverage sales</span><span>{fmt(pl.beverage_sales)}</span></div>
-          <div className="pl-line total"><span>Total revenue</span><span>{fmt(pl.total_revenue)}</span></div>
+          <div className="card-title">
+            P and L summary
+            {hasCompare && <span style={{ float: 'right', fontSize: 11, color: '#aaa', fontWeight: 400 }}>{compareLabel}</span>}
+          </div>
+          <div className="pl-line sub"><span>Food sales</span><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{fmt(pl.food_sales)}{hasCompare && <span style={{ color: '#aaa', fontSize: 12 }}>{fmt(plCompare.food_sales)}</span>}</span></div>
+          <div className="pl-line sub"><span>Beverage sales</span><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{fmt(pl.beverage_sales)}{hasCompare && <span style={{ color: '#aaa', fontSize: 12 }}>{fmt(plCompare.beverage_sales)}</span>}</span></div>
+          <div className="pl-line total"><span>Total revenue</span><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{fmt(pl.total_revenue)}{hasCompare && <ChangeTag current={pl.total_revenue} previous={plCompare.total_revenue} />}</span></div>
           <div className="pl-spacer" />
-          <div className="pl-line sub"><span>Food cost</span><span>{fmt(pl.food_cost)}</span></div>
-          <div className="pl-line sub"><span>Beverage cost</span><span>{fmt(pl.bev_cost)}</span></div>
-          <div className="pl-line sub"><span>Labor</span><span>{fmt(pl.labor)}</span></div>
+          <div className="pl-line sub"><span>Food cost</span><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{fmt(pl.food_cost)}{hasCompare && <span style={{ color: '#aaa', fontSize: 12 }}>{fmt(plCompare.food_cost)}</span>}</span></div>
+          <div className="pl-line sub"><span>Beverage cost</span><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{fmt(pl.bev_cost)}{hasCompare && <span style={{ color: '#aaa', fontSize: 12 }}>{fmt(plCompare.bev_cost)}</span>}</span></div>
+          <div className="pl-line sub"><span>Labor</span><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{fmt(pl.labor)}{hasCompare && <span style={{ color: '#aaa', fontSize: 12 }}>{fmt(plCompare.labor)}</span>}</span></div>
           <div className="pl-line sub"><span>Rent</span><span>{fmt(pl.rent)}</span></div>
           <div className="pl-line sub"><span>Utilities</span><span>{fmt(pl.utilities)}</span></div>
           <div className="pl-line sub"><span>Other</span><span>{fmt(pl.other)}</span></div>
           <div className={`pl-line total ${pl.net_profit >= 0 ? 'profit-pos' : 'profit-neg'}`}>
-            <span>Net profit</span><span>{fmt(pl.net_profit)}</span>
+            <span>Net profit</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {fmt(pl.net_profit)}
+              {hasCompare && <ChangeTag current={pl.net_profit} previous={plCompare.net_profit} />}
+            </span>
           </div>
         </div>
         <div className="card">
@@ -380,7 +436,8 @@ function Dashboard({ pl, loading }) {
   );
 }
 
-function EntryTab({ onSaved }) {
+function EntryTab({ onSaved, selectedMonth }) {
+  const currentMonth = selectedMonth || thisMonth();
   const [date, setDate] = useState(today());
   const [food, setFood] = useState('');
   const [bev, setBev] = useState('');
@@ -394,11 +451,11 @@ function EntryTab({ onSaved }) {
   const [editCovers, setEditCovers] = useState('');
   const [editSaving, setEditSaving] = useState(false);
 
-  useEffect(() => { loadEntries(); }, []); // eslint-disable-line
+  useEffect(() => { loadEntries(); }, [currentMonth]); // eslint-disable-line
 
   async function loadEntries() {
     try {
-      const month = thisMonth();
+      const month = currentMonth;
       const lastDay = new Date(month.split("-")[0], month.split("-")[1], 0).getDate();
       const res = await API.get(`/entries?from=${month}-01&to=${month}-${lastDay}`);
       setEntries(res.data.sort((a, b) => b.date.localeCompare(a.date)));
@@ -520,7 +577,8 @@ function EntryTab({ onSaved }) {
   );
 }
 
-function ExpensesTab({ onSaved }) {
+function ExpensesTab({ onSaved, selectedMonth }) {
+  const currentMonth = selectedMonth || thisMonth();
   const [date, setDate] = useState(today());
   const [category, setCategory] = useState('food_cost');
   const [subcategory, setSubcategory] = useState('');
@@ -577,11 +635,11 @@ function ExpensesTab({ onSaved }) {
     );
   }
 
-  useEffect(() => { loadExpenses(); }, []); // eslint-disable-line
+  useEffect(() => { loadExpenses(); }, [currentMonth]); // eslint-disable-line
 
   async function loadExpenses() {
     try {
-      const month = thisMonth();
+      const month = currentMonth;
       const lastDay2 = new Date(month.split("-")[0], month.split("-")[1], 0).getDate();
       const res = await API.get(`/expenses?from=${month}-01&to=${month}-${lastDay2}`);
       setExpenses(res.data.sort((a, b) => b.date.localeCompare(a.date)));
@@ -718,13 +776,13 @@ function ExpensesTab({ onSaved }) {
   );
 }
 
-function InventoryTab({ onSaved }) {
+function InventoryTab({ onSaved, selectedMonth }) {
   const emptyState = {
     meat_seafood: '', produce: '', dairy_eggs: '', dry_goods: '',
     beverages_coffee: '', beverages_soft_drinks: '', beverages_alcohol: '', other: ''
   };
 
-  const [month, setMonth] = useState(thisMonth());
+  const [month, setMonth] = useState(selectedMonth || thisMonth());
   const [opening, setOpening] = useState(emptyState);
   const [closing, setClosing] = useState(emptyState);
   const [saving, setSaving] = useState('');
@@ -959,7 +1017,10 @@ function SettingsTab({ onSaved }) {
 export default function App() {
   const [session, setSession] = useState(null);
   const [tab, setTab] = useState('dashboard');
+  const [selectedMonth, setSelectedMonth] = useState(thisMonth());
   const [pl, setPl] = useState(null);
+  const [plCompare, setPlCompare] = useState(null);
+  const [compareMode, setCompareMode] = useState('prev_month');
   const [plLoading, setPlLoading] = useState(false);
   const [subscription, setSubscription] = useState(null);
   const [showPricing, setShowPricing] = useState(false);
@@ -986,17 +1047,33 @@ export default function App() {
     return () => authSub.unsubscribe();
   }, []);
 
-  const loadPL = useCallback(async () => {
+  function getCompareMonth(month, mode) {
+    const [y, m] = month.split('-').map(Number);
+    if (mode === 'prev_month') {
+      const d = new Date(y, m - 2, 1);
+      return d.toISOString().slice(0, 7);
+    } else {
+      return `${y - 1}-${String(m).padStart(2, '0')}`;
+    }
+  }
+
+  const loadPL = useCallback(async (month, mode) => {
+    const m = month || selectedMonth;
+    const cm = mode || compareMode;
     setPlLoading(true);
     try {
-      const res = await API.get(`/pl?month=${thisMonth()}`);
-      setPl(res.data);
+      const [mainRes, compareRes] = await Promise.all([
+        API.get(`/pl?month=${m}`),
+        API.get(`/pl?month=${getCompareMonth(m, cm)}`),
+      ]);
+      setPl(mainRes.data);
+      setPlCompare(compareRes.data);
     } catch (e) {
       console.error('PL load error', e);
     } finally {
       setPlLoading(false);
     }
-  }, []);
+  }, [selectedMonth, compareMode]); // eslint-disable-line
 
   const loadSubscription = useCallback(async () => {
     try {
@@ -1069,21 +1146,49 @@ export default function App() {
       </nav>
       <main className="main-content">
         <div className="month-bar">
-          <span className="month-label">
-            {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <input
+              type="month"
+              value={selectedMonth}
+              max={thisMonth()}
+              onChange={e => {
+                setSelectedMonth(e.target.value);
+                loadPL(e.target.value, compareMode);
+              }}
+              style={{ border: '1px solid #ddd', borderRadius: 8, padding: '5px 10px', fontSize: 13, color: '#1a1a1a' }}
+            />
+            <select
+              value={compareMode}
+              onChange={e => {
+                setCompareMode(e.target.value);
+                loadPL(selectedMonth, e.target.value);
+              }}
+              style={{ border: '1px solid #ddd', borderRadius: 8, padding: '5px 10px', fontSize: 13, color: '#1a1a1a' }}
+            >
+              <option value="prev_month">vs Previous month</option>
+              <option value="prev_year">vs Same month last year</option>
+            </select>
+            {selectedMonth !== thisMonth() && (
+              <button
+                onClick={() => { setSelectedMonth(thisMonth()); loadPL(thisMonth(), compareMode); }}
+                style={{ background: '#E6F1FB', border: 'none', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: '#185FA5', cursor: 'pointer' }}
+              >
+                Back to current month
+              </button>
+            )}
+          </div>
           {subscription && subscription.plan === 'trial' && (
             <span className="trial-badge" onClick={() => setShowPricing(true)}>
               Free trial - {daysLeft} days left
             </span>
           )}
         </div>
-        {tab === 'dashboard' && <Dashboard pl={pl} loading={plLoading} />}
-        {tab === 'entry' && <EntryTab onSaved={loadPL} />}
-        {tab === 'expenses' && <ExpensesTab onSaved={loadPL} />}
-        {tab === 'inventory' && <InventoryTab onSaved={loadPL} />}
+        {tab === 'dashboard' && <Dashboard pl={pl} plCompare={plCompare} compareMode={compareMode} loading={plLoading} />}
+        {tab === 'entry' && <EntryTab onSaved={() => loadPL(selectedMonth, compareMode)} selectedMonth={selectedMonth} />}
+        {tab === 'expenses' && <ExpensesTab onSaved={() => loadPL(selectedMonth, compareMode)} selectedMonth={selectedMonth} />}
+        {tab === 'inventory' && <InventoryTab onSaved={() => loadPL(selectedMonth, compareMode)} selectedMonth={selectedMonth} />}
         {tab === 'advisor' && <AdvisorTab pl={pl} />}
-        {tab === 'settings' && <SettingsTab onSaved={loadPL} />}
+        {tab === 'settings' && <SettingsTab onSaved={() => loadPL(selectedMonth, compareMode)} />}
       </main>
     </div>
   );
