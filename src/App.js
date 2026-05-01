@@ -1050,7 +1050,8 @@ export default function App() {
   function getCompareMonth(month, mode) {
     const [y, m] = month.split('-').map(Number);
     if (mode === 'prev_month') {
-      const d = new Date(y, m - 2, 1);
+      const d = new Date(y, m - 1, 1);
+      d.setMonth(d.getMonth() - 1);
       return d.toISOString().slice(0, 7);
     } else {
       return `${y - 1}-${String(m).padStart(2, '0')}`;
