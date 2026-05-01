@@ -5,6 +5,7 @@ import Pricing from './Pricing';
 import './App.css';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts';
 
 const supabase = createClient(
   process.env.REACT_APP_SUPABASE_URL,
@@ -275,6 +276,8 @@ function exportPL(pl, inventory) {
 
 function Dashboard({ pl, plCompare, compareMode, loading }) {
   const [inventory, setInventory] = useState(null);
+  const [dailyData, setDailyData] = useState([]);
+  const [trendData, setTrendData] = useState([]);
 
   function changePct(current, previous) {
     if (!previous || previous === 0) return null;
@@ -303,22 +306,52 @@ function Dashboard({ pl, plCompare, compareMode, loading }) {
 
   useEffect(() => {
     if (pl && pl.month) {
+      // Load inventory
       API.get(`/inventory?month=${pl.month}`).then(res => {
         const inv = { opening: {}, closing: {} };
         res.data.forEach(i => { inv[i.type] = i; });
-
         const foodKeys = ['meat_seafood','produce','dairy_eggs','dry_goods','other'];
         const bevKeys  = ['beverages_coffee','beverages_soft_drinks','beverages_alcohol'];
-
         const foodOpening = foodKeys.reduce((s, k) => s + ((inv.opening[k] || 0) / 100), 0);
         const foodClosing = foodKeys.reduce((s, k) => s + ((inv.closing[k] || 0) / 100), 0);
         const bevOpening  = bevKeys.reduce((s, k) => s + ((inv.opening[k] || 0) / 100), 0);
         const bevClosing  = bevKeys.reduce((s, k) => s + ((inv.closing[k] || 0) / 100), 0);
-
         setInventory({ foodOpening, foodClosing, bevOpening, bevClosing });
       }).catch(() => {});
+
+      // Build daily chart data from pl.daily
+      if (pl.daily && pl.daily.length > 0) {
+        const compareDaily = plCompare && plCompare.daily ? plCompare.daily : [];
+        const data = pl.daily.map(d => {
+          const day = parseInt(d.date.split('-')[2]);
+          const compareDay = compareDaily.find(c => parseInt(c.date.split('-')[2]) === day);
+          return {
+            day: day,
+            Food: parseFloat(d.food_sales.toFixed(0)),
+            Beverage: parseFloat(d.beverage_sales.toFixed(0)),
+            'Last period': compareDay ? parseFloat((compareDay.food_sales + compareDay.beverage_sales).toFixed(0)) : null,
+          };
+        });
+        setDailyData(data);
+      }
+
+      // Load 6-month trend
+      const months = [];
+      const [y, m] = pl.month.split('-').map(Number);
+      for (let i = 5; i >= 0; i--) {
+        let mm = m - i;
+        let yy = y;
+        if (mm <= 0) { mm += 12; yy -= 1; }
+        months.push(`${yy}-${String(mm).padStart(2, '0')}`);
+      }
+      Promise.all(months.map(mo => API.get(`/pl?month=${mo}`).then(r => ({
+        month: mo.slice(5) + '/' + mo.slice(2, 4),
+        Revenue: parseFloat(r.data.total_revenue.toFixed(0)),
+        'Net profit': parseFloat(r.data.net_profit.toFixed(0)),
+      })).catch(() => ({ month: mo.slice(5), Revenue: 0, 'Net profit': 0 }))))
+        .then(results => setTrendData(results));
     }
-  }, [pl]); // eslint-disable-line
+  }, [pl, plCompare]); // eslint-disable-line
 
   if (loading) return <div className="loading">Loading your P&L...</div>;
   if (!pl || pl.total_revenue === 0) return (
@@ -432,12 +465,48 @@ function Dashboard({ pl, plCompare, compareMode, loading }) {
           Download P&L report (Excel)
         </button>
       </div>
+
+      {dailyData.length > 0 && (
+        <div className="card" style={{ marginTop: 14 }}>
+          <div className="card-title">Daily revenue — {pl.month}</div>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={dailyData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="day" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} tickFormatter={v => '$' + (v >= 1000 ? (v/1000).toFixed(1) + 'k' : v)} />
+              <Tooltip formatter={(v, n) => ['$' + v.toLocaleString(), n]} />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Bar dataKey="Food" stackId="a" fill="#185FA5" radius={[0,0,0,0]} />
+              <Bar dataKey="Beverage" stackId="a" fill="#1D9E75" radius={[3,3,0,0]} />
+              {hasCompare && <Line type="monotone" dataKey="Last period" stroke="#EF9F27" strokeWidth={2} dot={false} />}
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {trendData.length > 0 && (
+        <div className="card" style={{ marginTop: 14 }}>
+          <div className="card-title">6-month revenue trend</div>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={trendData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} tickFormatter={v => '$' + (v >= 1000 ? (v/1000).toFixed(1) + 'k' : v)} />
+              <Tooltip formatter={(v, n) => ['$' + v.toLocaleString(), n]} />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Line type="monotone" dataKey="Revenue" stroke="#185FA5" strokeWidth={2} dot={{ r: 4 }} />
+              <Line type="monotone" dataKey="Net profit" stroke="#1D9E75" strokeWidth={2} dot={{ r: 4 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 }
 
 function EntryTab({ onSaved, selectedMonth }) {
   const currentMonth = selectedMonth || thisMonth();
+  const compareMonth = getCompareMonth(currentMonth, 'prev_month');
   const [date, setDate] = useState(today());
   const [food, setFood] = useState('');
   const [bev, setBev] = useState('');
@@ -450,8 +519,14 @@ function EntryTab({ onSaved, selectedMonth }) {
   const [editBev, setEditBev] = useState('');
   const [editCovers, setEditCovers] = useState('');
   const [editSaving, setEditSaving] = useState(false);
+  const [summary, setSummary] = useState(null);
+  const [compareSummary, setCompareSummary] = useState(null);
 
-  useEffect(() => { loadEntries(); }, [currentMonth]); // eslint-disable-line
+  useEffect(() => {
+    loadEntries();
+    API.get(`/pl?month=${currentMonth}`).then(r => setSummary(r.data)).catch(() => {});
+    API.get(`/pl?month=${compareMonth}`).then(r => setCompareSummary(r.data)).catch(() => {});
+  }, [currentMonth]); // eslint-disable-line
 
   async function loadEntries() {
     try {
@@ -519,6 +594,31 @@ function EntryTab({ onSaved, selectedMonth }) {
 
   return (
     <div>
+      {summary && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 14 }}>
+          {[
+            { label: 'Total revenue', curr: summary.total_revenue, prev: compareSummary?.total_revenue },
+            { label: 'Food sales', curr: summary.food_sales, prev: compareSummary?.food_sales },
+            { label: 'Beverage sales', curr: summary.beverage_sales, prev: compareSummary?.beverage_sales },
+          ].map(({ label, curr, prev }) => {
+            const chg = prev && prev > 0 ? ((curr - prev) / prev * 100).toFixed(1) : null;
+            const isUp = chg && parseFloat(chg) > 0;
+            return (
+              <div key={label} className="metric-card">
+                <div className="metric-label">{label}</div>
+                <div className="metric-value" style={{ fontSize: 16 }}>{fmt(curr)}</div>
+                <div className="metric-sub">
+                  {chg ? (
+                    <span style={{ color: isUp ? '#27500A' : '#A32D2D', fontWeight: 600 }}>
+                      {isUp ? '↑' : '↓'} {Math.abs(chg)}% vs prev month
+                    </span>
+                  ) : <span>{summary.days_tracked} days tracked</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
       {editEntry && (
         <Modal title={`Edit entry — ${editEntry.date}`} onClose={() => setEditEntry(null)}>
           <div className="field-grid">
@@ -579,6 +679,7 @@ function EntryTab({ onSaved, selectedMonth }) {
 
 function ExpensesTab({ onSaved, selectedMonth }) {
   const currentMonth = selectedMonth || thisMonth();
+  const compareMonth = getCompareMonth(currentMonth, 'prev_month');
   const [date, setDate] = useState(today());
   const [category, setCategory] = useState('food_cost');
   const [subcategory, setSubcategory] = useState('');
@@ -593,6 +694,8 @@ function ExpensesTab({ onSaved, selectedMonth }) {
   const [editCat, setEditCat] = useState('food_cost');
   const [editSubcat, setEditSubcat] = useState('');
   const [editSaving, setEditSaving] = useState(false);
+  const [summary, setSummary] = useState(null);
+  const [compareSummary, setCompareSummary] = useState(null);
 
   const catLabels = {
     food_cost: 'Food cost', beverage_cost: 'Bev cost', labor: 'Labor',
@@ -635,7 +738,11 @@ function ExpensesTab({ onSaved, selectedMonth }) {
     );
   }
 
-  useEffect(() => { loadExpenses(); }, [currentMonth]); // eslint-disable-line
+  useEffect(() => {
+    loadExpenses();
+    API.get(`/pl?month=${currentMonth}`).then(r => setSummary(r.data)).catch(() => {});
+    API.get(`/pl?month=${compareMonth}`).then(r => setCompareSummary(r.data)).catch(() => {});
+  }, [currentMonth]); // eslint-disable-line
 
   async function loadExpenses() {
     try {
@@ -703,6 +810,32 @@ function ExpensesTab({ onSaved, selectedMonth }) {
 
   return (
     <div>
+      {summary && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 14 }}>
+          {[
+            { label: 'Total expenses', curr: summary.total_expenses, prev: compareSummary?.total_expenses, inverse: true },
+            { label: 'Food cost %', curr: summary.food_cost_pct, prev: compareSummary?.food_cost_pct, isPct: true, inverse: true },
+            { label: 'Labor cost %', curr: summary.labor_pct, prev: compareSummary?.labor_pct, isPct: true, inverse: true },
+          ].map(({ label, curr, prev, isPct, inverse }) => {
+            const chg = prev && prev > 0 ? ((curr - prev) / prev * 100).toFixed(1) : null;
+            const isUp = chg && parseFloat(chg) > 0;
+            const isGood = inverse ? !isUp : isUp;
+            return (
+              <div key={label} className="metric-card">
+                <div className="metric-label">{label}</div>
+                <div className="metric-value" style={{ fontSize: 16 }}>{isPct ? pct(curr) : fmt(curr)}</div>
+                <div className="metric-sub">
+                  {chg ? (
+                    <span style={{ color: isGood ? '#27500A' : '#A32D2D', fontWeight: 600 }}>
+                      {isUp ? '↑' : '↓'} {Math.abs(chg)}% vs prev month
+                    </span>
+                  ) : <span>vs prev month: {prev ? (isPct ? pct(prev) : fmt(prev)) : 'No data'}</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
       {editExp && (
         <Modal title={`Edit expense — ${editExp.date}`} onClose={() => setEditExp(null)}>
           <div className="field-grid">
