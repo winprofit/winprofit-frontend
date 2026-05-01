@@ -453,21 +453,23 @@ function Dashboard({ pl, plCompare, compareMode, loading }) {
 
       {days && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 14 }}>
-          <div className="metric-card" style={{ background: '#EAF3DE' }}>
-            <div className="metric-label">🏆 Best day</div>
-            <div className="metric-value" style={{ fontSize: 18, color: '#27500A' }}>{fmt(days.best.total)}</div>
-            <div className="metric-sub">{days.best.date}</div>
-          </div>
-          <div className="metric-card" style={{ background: '#FCEBEB' }}>
-            <div className="metric-label">📉 Worst day</div>
-            <div className="metric-value" style={{ fontSize: 18, color: '#A32D2D' }}>{fmt(days.worst.total)}</div>
-            <div className="metric-sub">{days.worst.date}</div>
-          </div>
-          <div className="metric-card" style={{ background: '#E6F1FB' }}>
-            <div className="metric-label">👥 Busiest day</div>
-            <div className="metric-value" style={{ fontSize: 18, color: '#185FA5' }}>{days.busiest.covers || 0} covers</div>
-            <div className="metric-sub">{days.busiest.date}</div>
-          </div>
+          {[
+            { label: '🏆 Best day', val: fmt(days.best.total), date: days.best.date, bg: '#EAF3DE', color: '#27500A' },
+            { label: '📉 Worst day', val: fmt(days.worst.total), date: days.worst.date, bg: '#FCEBEB', color: '#A32D2D' },
+            { label: '👥 Busiest day', val: (days.busiest.covers || 0) + ' covers', date: days.busiest.date, bg: '#E6F1FB', color: '#185FA5' },
+          ].map(({ label, val, date, bg, color }) => {
+            const d = new Date(date + 'T12:00:00');
+            const dayName = d.toLocaleDateString('en-US', { weekday: 'long' });
+            const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            return (
+              <div key={label} className="metric-card" style={{ background: bg }}>
+                <div className="metric-label">{label}</div>
+                <div className="metric-value" style={{ fontSize: 18, color }}>{val}</div>
+                <div className="metric-sub" style={{ fontWeight: 600, color }}>{dayName}</div>
+                <div className="metric-sub">{dateStr}</div>
+              </div>
+            );
+          })}
         </div>
       )}
       <div className="metrics-grid">
