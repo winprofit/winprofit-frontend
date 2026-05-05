@@ -1225,10 +1225,12 @@ function SettingsTab({ onSaved, lang, setLang }) {
         currency,
         weekly_revenue_target: Math.round((parseFloat(weeklyTarget) || 0) * 100),
         food_cost_alert_pct: parseFloat(foodCostAlert) || 35,
+        language: langSetting,
       });
-      setMsg(t(lang,'saved'));
+      localStorage.setItem('winprofit_lang', langSetting);
+      setLang(langSetting);
       onSaved();
-      setTimeout(() => setMsg(''), 2000);
+      setTimeout(() => window.location.reload(), 300);
     } catch (e) {
       setMsg(t(lang,'errorSaving'));
     } finally {
