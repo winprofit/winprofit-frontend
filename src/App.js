@@ -166,9 +166,9 @@ function exportSales(entries, month) {
 
 function exportExpenses(expenses, month) {
   const catLabels = {
-    food_cost: t(lang,'catFoodCost'), beverage_cost: t(lang,'catBevCost'), labor: t(lang,'catLabor'),
-    rent: t(lang,'catRent'), utilities: t(lang,'catUtilities'), marketing: t(lang,'catMarketing'),
-    maintenance: t(lang,'catMaintenance'), other: t(lang,'catOther')
+    food_cost: 'Food cost', beverage_cost: 'Bev cost', labor: 'Labor',
+    rent: 'Rent', utilities: 'Utilities', marketing: 'Marketing',
+    maintenance: 'Maintenance', other: 'Other'
   };
 
   const headers = [['Date', 'Category', 'Description', 'Amount ($)']];
