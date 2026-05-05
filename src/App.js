@@ -7,6 +7,7 @@ import './App.css';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts';
+import { t, languageNames } from './translations';
 
 const supabase = createClient(
   process.env.REACT_APP_SUPABASE_URL,
@@ -46,7 +47,7 @@ function Modal({ title, onClose, children }) {
   );
 }
 
-function AuthScreen({ onLogin }) {
+function AuthScreen({ onLogin, lang = 'en' }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSignup, setIsSignup] = useState(false);
@@ -79,7 +80,7 @@ function AuthScreen({ onLogin }) {
     <div className="auth-wrap">
       <div className="auth-card">
         <div className="brand-lg">Win<span>Profit</span></div>
-        <p className="auth-sub">Restaurant P&L and AI Advisor</p>
+        <p className="auth-sub">{t(lang, 'restaurantPL')}</p>
         <form onSubmit={handleSubmit}>
           <div className="field">
             <label>Email</label>
@@ -91,13 +92,13 @@ function AuthScreen({ onLogin }) {
           </div>
           {error && <div className="error-msg">{error}</div>}
           <button className="primary-btn" type="submit" disabled={loading}>
-            {loading ? 'Please wait...' : isSignup ? 'Create account' : 'Sign in'}
+            {loading ? t(lang,'pleaseWait') : isSignup ? t(lang,'createAccount') : t(lang,'signIn')}
           </button>
         </form>
         <p className="auth-toggle">
-          {isSignup ? 'Already have an account?' : "Don't have an account?"}
+          {isSignup ? t(lang,'alreadyHaveAccount') : t(lang,'dontHaveAccount')}
           <button className="link-btn" onClick={() => { setIsSignup(!isSignup); setError(''); }}>
-            {isSignup ? 'Sign in' : 'Sign up'}
+            {isSignup ? t(lang,'signIn') : t(lang,'signUp')}
           </button>
         </p>
       </div>
@@ -165,9 +166,9 @@ function exportSales(entries, month) {
 
 function exportExpenses(expenses, month) {
   const catLabels = {
-    food_cost: 'Food cost', beverage_cost: 'Bev cost', labor: 'Labor',
-    rent: 'Rent', utilities: 'Utilities', marketing: 'Marketing',
-    maintenance: 'Maintenance', other: 'Other'
+    food_cost: t(lang,'catFoodCost'), beverage_cost: t(lang,'catBevCost'), labor: t(lang,'catLabor'),
+    rent: t(lang,'catRent'), utilities: t(lang,'catUtilities'), marketing: t(lang,'catMarketing'),
+    maintenance: t(lang,'catMaintenance'), other: t(lang,'catOther')
   };
 
   const headers = [['Date', 'Category', 'Description', 'Amount ($)']];
@@ -275,7 +276,7 @@ function exportPL(pl, inventory) {
   saveAs(new Blob([buf], { type: 'application/octet-stream' }), 'WinProfit_PL_' + pl.month + '.xlsx');
 }
 
-function Dashboard({ pl, plCompare, compareMode, loading }) {
+function Dashboard({ pl, plCompare, compareMode, loading, lang = 'en' }) {
   const [inventory, setInventory] = useState(null);
   const [dailyData, setDailyData] = useState([]);
   const [trendData, setTrendData] = useState([]);
@@ -303,7 +304,7 @@ function Dashboard({ pl, plCompare, compareMode, loading }) {
     );
   }
 
-  const compareLabel = compareMode === 'prev_month' ? 'vs prev month' : 'vs last year';
+  const compareLabel = compareMode === 'prev_month' ? t(lang,'vsPrevMonth') : t(lang,'vsSameLastYear');
   const hasCompare = plCompare && plCompare.total_revenue > 0;
 
   // Weekly target calculation
@@ -370,8 +371,8 @@ function Dashboard({ pl, plCompare, compareMode, loading }) {
       Promise.all(months.map(mo => API.get(`/pl?month=${mo}`).then(r => ({
         month: mo.slice(5) + '/' + mo.slice(2, 4),
         Revenue: parseFloat(r.data.total_revenue.toFixed(0)),
-        'Net profit': parseFloat(r.data.net_profit.toFixed(0)),
-      })).catch(() => ({ month: mo.slice(5), Revenue: 0, 'Net profit': 0 }))))
+        t(lang,'netProfit'): parseFloat(r.data.net_profit.toFixed(0)),
+      })).catch(() => ({ month: mo.slice(5), Revenue: 0, t(lang,'netProfit'): 0 }))))
         .then(results => setTrendData(results));
     }
   }, [pl, plCompare]); // eslint-disable-line
@@ -380,8 +381,8 @@ function Dashboard({ pl, plCompare, compareMode, loading }) {
   if (!pl || pl.total_revenue === 0) return (
     <div className="empty-state">
       <div className="empty-icon">📊</div>
-      <p>No data yet for this month.</p>
-      <p>Go to <strong>Enter data</strong> to add your first sales entry.</p>
+      <p>{t(lang,'noDataYet')}</p>
+      <p>{t(lang,'goToEnterData')}</p>
     </div>
   );
 
@@ -446,7 +447,7 @@ function Dashboard({ pl, plCompare, compareMode, loading }) {
             }} />
           </div>
           <div style={{ fontSize: 11, color: '#aaa', marginTop: 6 }}>
-            {weekPct >= 100 ? '🎉 Target reached this week!' : `${weekPct.toFixed(0)}% of weekly target — ${fmt(weeklyTarget - weekRevenue)} to go`}
+            {weekPct >= 100 ? '🎉 ' + t(lang,'weeklyTargetReached') : `${weekPct.toFixed(0)}% of weekly target — ${fmt(weeklyTarget - weekRevenue)} to go`}
           </div>
         </div>
       )}
@@ -454,9 +455,9 @@ function Dashboard({ pl, plCompare, compareMode, loading }) {
       {days && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 14 }}>
           {[
-            { label: '🏆 Best day', val: fmt(days.best.total), date: days.best.date, bg: '#EAF3DE', color: '#27500A' },
-            { label: '📉 Worst day', val: fmt(days.worst.total), date: days.worst.date, bg: '#FCEBEB', color: '#A32D2D' },
-            { label: '👥 Busiest day', val: (days.busiest.covers || 0) + ' covers', date: days.busiest.date, bg: '#E6F1FB', color: '#185FA5' },
+            { label: '🏆 ' + t(lang,'bestDay'), val: fmt(days.best.total), date: days.best.date, bg: '#EAF3DE', color: '#27500A' },
+            { label: '📉 ' + t(lang,'worstDay'), val: fmt(days.worst.total), date: days.worst.date, bg: '#FCEBEB', color: '#A32D2D' },
+            { label: '👥 ' + t(lang,'busiestDay'), val: (days.busiest.covers || 0) + ' ' + t(lang,'covers'), date: days.busiest.date, bg: '#E6F1FB', color: '#185FA5' },
           ].map(({ label, val, date, bg, color }) => {
             const d = new Date(date + 'T12:00:00');
             const dayName = d.toLocaleDateString('en-US', { weekday: 'long' });
@@ -480,7 +481,7 @@ function Dashboard({ pl, plCompare, compareMode, loading }) {
             {hasCompare && <ChangeTag current={pl.total_revenue} previous={plCompare.total_revenue} />}
           </div>
           <div className="metric-sub">
-            {pl.days_tracked} days tracked
+            {pl.days_tracked} {t(lang,'daysTracked')}
             {hasCompare && <span style={{ marginLeft: 6, color: '#aaa' }}>{compareLabel}: {fmt(plCompare.total_revenue)}</span>}
           </div>
         </div>
@@ -491,7 +492,7 @@ function Dashboard({ pl, plCompare, compareMode, loading }) {
             {hasCompare && <ChangeTag current={pl.food_cost_pct} previous={plCompare.food_cost_pct} inverse={true} />}
           </div>
           <div className={`metric-sub ${fcStatus}`}>
-            Target: 28-32%
+            {t(lang,'target')}: 28-32%
             {hasCompare && <span style={{ marginLeft: 6, color: '#aaa' }}>{compareLabel}: {pct(plCompare.food_cost_pct)}</span>}
           </div>
         </div>
@@ -502,7 +503,7 @@ function Dashboard({ pl, plCompare, compareMode, loading }) {
             {hasCompare && <ChangeTag current={pl.labor_pct} previous={plCompare.labor_pct} inverse={true} />}
           </div>
           <div className={`metric-sub ${labStatus}`}>
-            Target: 28-35%
+            {t(lang,'target')}: 28-35%
             {hasCompare && <span style={{ marginLeft: 6, color: '#aaa' }}>{compareLabel}: {pct(plCompare.labor_pct)}</span>}
           </div>
         </div>
@@ -513,7 +514,7 @@ function Dashboard({ pl, plCompare, compareMode, loading }) {
             {hasCompare && <ChangeTag current={pl.net_profit} previous={plCompare.net_profit} />}
           </div>
           <div className={`metric-sub ${marginStatus}`}>
-            Margin: {pct(pl.net_margin_pct)}
+            {t(lang,'margin')}: {pct(pl.net_margin_pct)}
             {hasCompare && <span style={{ marginLeft: 6, color: '#aaa' }}>{compareLabel}: {pct(plCompare.net_margin_pct)}</span>}
           </div>
         </div>
@@ -521,21 +522,21 @@ function Dashboard({ pl, plCompare, compareMode, loading }) {
       <div className="two-col">
         <div className="card">
           <div className="card-title">
-            P and L summary
+            {t(lang,'pandlSummary')}
             {hasCompare && <span style={{ float: 'right', fontSize: 11, color: '#aaa', fontWeight: 400 }}>{compareLabel}</span>}
           </div>
-          <div className="pl-line sub"><span>Food sales</span><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{fmt(pl.food_sales)}{hasCompare && <span style={{ color: '#aaa', fontSize: 12 }}>{fmt(plCompare.food_sales)}</span>}</span></div>
-          <div className="pl-line sub"><span>Beverage sales</span><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{fmt(pl.beverage_sales)}{hasCompare && <span style={{ color: '#aaa', fontSize: 12 }}>{fmt(plCompare.beverage_sales)}</span>}</span></div>
-          <div className="pl-line total"><span>Total revenue</span><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{fmt(pl.total_revenue)}{hasCompare && <ChangeTag current={pl.total_revenue} previous={plCompare.total_revenue} />}</span></div>
+          <div className="pl-line sub"><span>{t(lang,'foodSales')}</span><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{fmt(pl.food_sales)}{hasCompare && <span style={{ color: '#aaa', fontSize: 12 }}>{fmt(plCompare.food_sales)}</span>}</span></div>
+          <div className="pl-line sub"><span>{t(lang,'beverageSales')}</span><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{fmt(pl.beverage_sales)}{hasCompare && <span style={{ color: '#aaa', fontSize: 12 }}>{fmt(plCompare.beverage_sales)}</span>}</span></div>
+          <div className="pl-line total"><span>{t(lang,'totalRevenueLine')}</span><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{fmt(pl.total_revenue)}{hasCompare && <ChangeTag current={pl.total_revenue} previous={plCompare.total_revenue} />}</span></div>
           <div className="pl-spacer" />
-          <div className="pl-line sub"><span>Food cost</span><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{fmt(pl.food_cost)}{hasCompare && <span style={{ color: '#aaa', fontSize: 12 }}>{fmt(plCompare.food_cost)}</span>}</span></div>
-          <div className="pl-line sub"><span>Beverage cost</span><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{fmt(pl.bev_cost)}{hasCompare && <span style={{ color: '#aaa', fontSize: 12 }}>{fmt(plCompare.bev_cost)}</span>}</span></div>
-          <div className="pl-line sub"><span>Labor</span><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{fmt(pl.labor)}{hasCompare && <span style={{ color: '#aaa', fontSize: 12 }}>{fmt(plCompare.labor)}</span>}</span></div>
-          <div className="pl-line sub"><span>Rent</span><span>{fmt(pl.rent)}</span></div>
-          <div className="pl-line sub"><span>Utilities</span><span>{fmt(pl.utilities)}</span></div>
-          <div className="pl-line sub"><span>Other</span><span>{fmt(pl.other)}</span></div>
+          <div className="pl-line sub"><span>{t(lang,'foodCost')}</span><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{fmt(pl.food_cost)}{hasCompare && <span style={{ color: '#aaa', fontSize: 12 }}>{fmt(plCompare.food_cost)}</span>}</span></div>
+          <div className="pl-line sub"><span>{t(lang,'beverageCost')}</span><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{fmt(pl.bev_cost)}{hasCompare && <span style={{ color: '#aaa', fontSize: 12 }}>{fmt(plCompare.bev_cost)}</span>}</span></div>
+          <div className="pl-line sub"><span>{t(lang,'labor')}</span><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{fmt(pl.labor)}{hasCompare && <span style={{ color: '#aaa', fontSize: 12 }}>{fmt(plCompare.labor)}</span>}</span></div>
+          <div className="pl-line sub"><span>{t(lang,'rent')}</span><span>{fmt(pl.rent)}</span></div>
+          <div className="pl-line sub"><span>{t(lang,'utilities')}</span><span>{fmt(pl.utilities)}</span></div>
+          <div className="pl-line sub"><span>{t(lang,'other')}</span><span>{fmt(pl.other)}</span></div>
           <div className={`pl-line total ${pl.net_profit >= 0 ? 'profit-pos' : 'profit-neg'}`}>
-            <span>Net profit</span>
+            <span>{t(lang,'netProfitLine')}</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {fmt(pl.net_profit)}
               {hasCompare && <ChangeTag current={pl.net_profit} previous={plCompare.net_profit} />}
@@ -543,12 +544,12 @@ function Dashboard({ pl, plCompare, compareMode, loading }) {
           </div>
         </div>
         <div className="card">
-          <div className="card-title">Cost breakdown</div>
+          <div className="card-title">{t(lang,'costBreakdown')}</div>
           {[
-            { label: 'Food cost', val: pl.food_cost_pct, color: '#E24B4A' },
-            { label: 'Labor', val: pl.labor_pct, color: '#378ADD' },
-            { label: 'Prime cost', val: pl.prime_cost_pct, color: '#7F77DD' },
-            { label: 'Bev mix', val: pl.bev_mix_pct, color: '#1D9E75' },
+            { label: t(lang,'foodCost'), val: pl.food_cost_pct, color: '#E24B4A' },
+            { label: t(lang,'labor'), val: pl.labor_pct, color: '#378ADD' },
+            { label: t(lang,'primeCost'), val: pl.prime_cost_pct, color: '#7F77DD' },
+            { label: t(lang,'bevMix'), val: pl.bev_mix_pct, color: '#1D9E75' },
           ].map(({ label, val, color }) => (
             <div className="bar-row" key={label}>
               <div className="bar-label">{label}</div>
@@ -559,20 +560,20 @@ function Dashboard({ pl, plCompare, compareMode, loading }) {
             </div>
           ))}
           <div className="card-stats">
-            <div className="stat-row"><span>Avg check</span><span>${(pl.avg_check || 0).toFixed(2)}</span></div>
-            <div className="stat-row"><span>Total covers</span><span>{pl.covers}</span></div>
+            <div className="stat-row"><span>{t(lang,'avgCheck')}</span><span>${(pl.avg_check || 0).toFixed(2)}</span></div>
+            <div className="stat-row"><span>{t(lang,'totalCovers')}</span><span>{pl.covers}</span></div>
           </div>
         </div>
       </div>
       <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
         <button className="secondary-btn" onClick={() => exportPL(pl, inventory)} style={{ flex: 1 }}>
-          Download P&L report (Excel)
+          {t(lang,'downloadPL')}
         </button>
       </div>
 
       {dailyData.length > 0 && (
         <div className="card" style={{ marginTop: 14 }}>
-          <div className="card-title">Daily revenue — {pl.month}</div>
+          <div className="card-title">{t(lang,'dailyRevenue')} — {pl.month}</div>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={dailyData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -590,7 +591,7 @@ function Dashboard({ pl, plCompare, compareMode, loading }) {
 
       {trendData.length > 0 && (
         <div className="card" style={{ marginTop: 14 }}>
-          <div className="card-title">6-month revenue trend</div>
+          <div className="card-title">{t(lang,'monthTrend')}</div>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={trendData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -608,7 +609,7 @@ function Dashboard({ pl, plCompare, compareMode, loading }) {
   );
 }
 
-function EntryTab({ onSaved, selectedMonth }) {
+function EntryTab({ onSaved, selectedMonth, lang = 'en' }) {
   const currentMonth = selectedMonth || thisMonth();
   const compareMonth = getCompareMonth(currentMonth, 'prev_month');
   const [date, setDate] = useState(today());
@@ -642,7 +643,7 @@ function EntryTab({ onSaved, selectedMonth }) {
   }
 
   async function save() {
-    if (!date || (!food && !bev)) { setMsg('Please enter a date and at least one sales amount.'); return; }
+    if (!date || (!food && !bev)) { setMsg(t(lang,'pleaseEnterDate')); return; }
     setSaving(true); setMsg('');
     try {
       await API.post('/entries', {
@@ -652,19 +653,19 @@ function EntryTab({ onSaved, selectedMonth }) {
         covers: parseInt(covers) || 0,
       });
       setFood(''); setBev(''); setCovers('');
-      setMsg('Saved!');
+      setMsg(t(lang,'saved'));
       await loadEntries();
       onSaved();
       setTimeout(() => setMsg(''), 2000);
     } catch (e) {
-      setMsg('Error saving. Please try again.');
+      setMsg(t(lang,'errorSaving'));
     } finally {
       setSaving(false);
     }
   }
 
   async function del(id) {
-    if (!window.confirm('Delete this entry?')) return;
+    if (!window.confirm(t(lang,'errorDelete'))) return;
     try {
       await API.delete(`/entries/${id}`);
       await loadEntries();
@@ -701,7 +702,7 @@ function EntryTab({ onSaved, selectedMonth }) {
       {summary && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 14 }}>
           {[
-            { label: 'Total revenue', curr: summary.total_revenue, prev: compareSummary?.total_revenue },
+            { label: t(lang,'totalRevenue'), curr: summary.total_revenue, prev: compareSummary?.total_revenue },
             { label: 'Food sales', curr: summary.food_sales, prev: compareSummary?.food_sales },
             { label: 'Beverage sales', curr: summary.beverage_sales, prev: compareSummary?.beverage_sales },
           ].map(({ label, curr, prev }) => {
@@ -714,9 +715,9 @@ function EntryTab({ onSaved, selectedMonth }) {
                 <div className="metric-sub">
                   {chg ? (
                     <span style={{ color: isUp ? '#27500A' : '#A32D2D', fontWeight: 600 }}>
-                      {isUp ? '↑' : '↓'} {Math.abs(chg)}% vs prev month
+                      {isUp ? '↑' : '↓'} {Math.abs(chg)}% {t(lang,'vsPrevMonth')}
                     </span>
-                  ) : <span>{summary.days_tracked} days tracked</span>}
+                  ) : <span>{summary.days_tracked} {t(lang,'daysTracked')}</span>}
                 </div>
               </div>
             );
@@ -724,15 +725,15 @@ function EntryTab({ onSaved, selectedMonth }) {
         </div>
       )}
       {editEntry && (
-        <Modal title={`Edit entry — ${editEntry.date}`} onClose={() => setEditEntry(null)}>
+        <Modal title={`${t(lang,'editEntry')} — ${editEntry.date}`} onClose={() => setEditEntry(null)}>
           <div className="field-grid">
             <div className="field"><label>Food sales ($)</label><input type="number" value={editFood} onChange={e => setEditFood(e.target.value)} min="0" /></div>
             <div className="field"><label>Beverage sales ($)</label><input type="number" value={editBev} onChange={e => setEditBev(e.target.value)} min="0" /></div>
-            <div className="field"><label>Covers (guests)</label><input type="number" value={editCovers} onChange={e => setEditCovers(e.target.value)} min="0" /></div>
+            <div className="field"><label>{t(lang,'coversGuests')}</label><input type="number" value={editCovers} onChange={e => setEditCovers(e.target.value)} min="0" /></div>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
             <button className="primary-btn" onClick={saveEdit} disabled={editSaving} style={{ flex: 1 }}>
-              {editSaving ? 'Saving...' : 'Save changes'}
+              {editSaving ? t(lang,'saving') : t(lang,'saveChanges')}
             </button>
             <button onClick={() => setEditEntry(null)} style={{ flex: 1, background: '#f5f5f5', border: '1px solid #ddd', borderRadius: 8, padding: 10, cursor: 'pointer', fontSize: 14 }}>
               Cancel
@@ -742,26 +743,26 @@ function EntryTab({ onSaved, selectedMonth }) {
       )}
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <div className="card-title">Add or update daily sales</div>
+        <div className="card-title">{t(lang,'addUpdateSales')}</div>
         <div className="field-grid">
-          <div className="field"><label>Date</label><input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
-          <div className="field"><label>Covers (guests)</label><input type="number" value={covers} onChange={e => setCovers(e.target.value)} placeholder="e.g. 52" min="0" /></div>
+          <div className="field"><label>{t(lang,'date')}</label><input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
+          <div className="field"><label>{t(lang,'coversGuests')}</label><input type="number" value={covers} onChange={e => setCovers(e.target.value)} placeholder="e.g. 52" min="0" /></div>
           <div className="field"><label>Food sales ($)</label><input type="number" value={food} onChange={e => setFood(e.target.value)} placeholder="e.g. 1200" min="0" /></div>
           <div className="field"><label>Beverage sales ($)</label><input type="number" value={bev} onChange={e => setBev(e.target.value)} placeholder="e.g. 380" min="0" /></div>
         </div>
         {msg && <div className={`msg ${msg === 'Saved!' ? 'msg-ok' : 'msg-err'}`}>{msg}</div>}
-        <button className="primary-btn" onClick={save} disabled={saving}>{saving ? 'Saving...' : 'Save entry'}</button>
+        <button className="primary-btn" onClick={save} disabled={saving}>{saving ? t(lang,'saving') : t(lang,'saveEntry')}</button>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <div className="section-title" style={{ margin: 0 }}>This month ({entries.length} entries)</div>
+        <div className="section-title" style={{ margin: 0 }}>{t(lang,'thisMonth')} ({entries.length} {t(lang,'entries')})</div>
         {entries.length > 0 && (
           <button onClick={() => exportSales(entries, thisMonth())} style={{ background: '#E6F1FB', border: 'none', borderRadius: 6, padding: '6px 12px', fontSize: 12, color: '#185FA5', cursor: 'pointer' }}>
-            Download Excel
+            {t(lang,'downloadExcel')}
           </button>
         )}
       </div>
       {entries.length === 0
-        ? <div className="empty-state"><p>No entries yet this month.</p></div>
+        ? <div className="empty-state"><p>{t(lang,'noEntriesYet')}</p></div>
         : entries.map(e => (
           <div className="list-item" key={e.id}>
             <span className="list-date">{e.date}</span>
@@ -771,7 +772,7 @@ function EntryTab({ onSaved, selectedMonth }) {
               <span>Covers: {e.covers}</span>
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
-              <button onClick={() => openEdit(e)} style={{ background: '#E6F1FB', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, color: '#185FA5', cursor: 'pointer' }}>Edit</button>
+              <button onClick={() => openEdit(e)} style={{ background: '#E6F1FB', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, color: '#185FA5', cursor: 'pointer' }}>{t(lang,'edit')}</button>
               <button className="del-btn" onClick={() => del(e.id)}>x</button>
             </div>
           </div>
@@ -781,7 +782,7 @@ function EntryTab({ onSaved, selectedMonth }) {
   );
 }
 
-function ExpensesTab({ onSaved, selectedMonth }) {
+function ExpensesTab({ onSaved, selectedMonth, lang = 'en' }) {
   const currentMonth = selectedMonth || thisMonth();
   const compareMonth = getCompareMonth(currentMonth, 'prev_month');
   const [date, setDate] = useState(today());
@@ -802,24 +803,24 @@ function ExpensesTab({ onSaved, selectedMonth }) {
   const [compareSummary, setCompareSummary] = useState(null);
 
   const catLabels = {
-    food_cost: 'Food cost', beverage_cost: 'Bev cost', labor: 'Labor',
-    rent: 'Rent', utilities: 'Utilities', marketing: 'Marketing',
-    maintenance: 'Maintenance', other: 'Other'
+    food_cost: t(lang,'catFoodCost'), beverage_cost: t(lang,'catBevCost'), labor: t(lang,'catLabor'),
+    rent: t(lang,'catRent'), utilities: t(lang,'catUtilities'), marketing: t(lang,'catMarketing'),
+    maintenance: t(lang,'catMaintenance'), other: t(lang,'catOther')
   };
 
   const foodSubcats = [
-    { value: 'meat_seafood', label: 'Meat & Seafood' },
-    { value: 'produce', label: 'Produce' },
-    { value: 'dairy_eggs', label: 'Dairy & Eggs' },
-    { value: 'dry_goods', label: 'Dry Goods & Pantry' },
-    { value: 'other_food', label: 'Other food' },
+    { value: 'meat_seafood', label: t(lang,'meatSeafood') },
+    { value: 'produce', label: t(lang,'produce') },
+    { value: 'dairy_eggs', label: t(lang,'dairyEggs') },
+    { value: 'dry_goods', label: t(lang,'dryGoods') },
+    { value: 'other_food', label: t(lang,'otherFood') },
   ];
 
   const bevSubcats = [
-    { value: 'coffee_tea', label: 'Coffee & Tea' },
-    { value: 'soft_drinks', label: 'Soft Drinks' },
-    { value: 'alcohol', label: 'Alcohol' },
-    { value: 'other_bev', label: 'Other beverage' },
+    { value: 'coffee_tea', label: t(lang,'coffeeTea') },
+    { value: 'soft_drinks', label: t(lang,'softDrinks') },
+    { value: 'alcohol', label: t(lang,'alcohol') },
+    { value: 'other_bev', label: t(lang,'otherBev') },
   ];
 
   function getSubcats(cat) {
@@ -833,9 +834,9 @@ function ExpensesTab({ onSaved, selectedMonth }) {
     if (subcats.length === 0) return null;
     return (
       <div className="field">
-        <label>Subcategory</label>
+        <label>{t(lang,'subcategory')}</label>
         <select value={value} onChange={e => onChange(e.target.value)}>
-          <option value="">Select subcategory...</option>
+          <option value="">{t(lang,'selectSubcategory')}</option>
           {subcats.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>
       </div>
@@ -858,24 +859,24 @@ function ExpensesTab({ onSaved, selectedMonth }) {
   }
 
   async function save() {
-    if (!date || !amount) { setMsg('Please enter a date and amount.'); return; }
+    if (!date || !amount) { setMsg(t(lang,'pleaseEnterDateAmount')); return; }
     setSaving(true); setMsg('');
     try {
       await API.post('/expenses', { date, category, subcategory, amount: parseFloat(amount), description: desc });
       setAmount(''); setDesc(''); setSubcategory('');
-      setMsg('Saved!');
+      setMsg(t(lang,'saved'));
       await loadExpenses();
       onSaved();
       setTimeout(() => setMsg(''), 2000);
     } catch (e) {
-      setMsg('Error saving. Please try again.');
+      setMsg(t(lang,'errorSaving'));
     } finally {
       setSaving(false);
     }
   }
 
   async function del(id) {
-    if (!window.confirm('Delete this expense?')) return;
+    if (!window.confirm(t(lang,'errorDeleteExpense'))) return;
     try {
       await API.delete(`/expenses/${id}`);
       await loadExpenses();
@@ -918,8 +919,8 @@ function ExpensesTab({ onSaved, selectedMonth }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 14 }}>
           {[
             { label: 'Total expenses', curr: summary.total_expenses, prev: compareSummary?.total_expenses, inverse: true },
-            { label: 'Food cost %', curr: summary.food_cost_pct, prev: compareSummary?.food_cost_pct, isPct: true, inverse: true },
-            { label: 'Labor cost %', curr: summary.labor_pct, prev: compareSummary?.labor_pct, isPct: true, inverse: true },
+            { label: t(lang,'foodCostPct'), curr: summary.food_cost_pct, prev: compareSummary?.food_cost_pct, isPct: true, inverse: true },
+            { label: t(lang,'laborCostPct'), curr: summary.labor_pct, prev: compareSummary?.labor_pct, isPct: true, inverse: true },
           ].map(({ label, curr, prev, isPct, inverse }) => {
             const chg = prev && prev > 0 ? ((curr - prev) / prev * 100).toFixed(1) : null;
             const isUp = chg && parseFloat(chg) > 0;
@@ -931,9 +932,9 @@ function ExpensesTab({ onSaved, selectedMonth }) {
                 <div className="metric-sub">
                   {chg ? (
                     <span style={{ color: isGood ? '#27500A' : '#A32D2D', fontWeight: 600 }}>
-                      {isUp ? '↑' : '↓'} {Math.abs(chg)}% vs prev month
+                      {isUp ? '↑' : '↓'} {Math.abs(chg)}% {t(lang,'vsPrevMonth')}
                     </span>
-                  ) : <span>vs prev month: {prev ? (isPct ? pct(prev) : fmt(prev)) : 'No data'}</span>}
+                  ) : <span>t(lang,'vsPrevMonth') + ':' {prev ? (isPct ? pct(prev) : fmt(prev)) : t(lang,'noDataYet')}</span>}
                 </div>
               </div>
             );
@@ -941,9 +942,9 @@ function ExpensesTab({ onSaved, selectedMonth }) {
         </div>
       )}
       {editExp && (
-        <Modal title={`Edit expense — ${editExp.date}`} onClose={() => setEditExp(null)}>
+        <Modal title={`${t(lang,'editExpense')} — ${editExp.date}`} onClose={() => setEditExp(null)}>
           <div className="field-grid">
-            <div className="field"><label>Category</label>
+            <div className="field"><label>{t(lang,'category')}</label>
               <select value={editCat} onChange={e => { setEditCat(e.target.value); setEditSubcat(''); }}>
                 {Object.entries(catLabels).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
@@ -952,11 +953,11 @@ function ExpensesTab({ onSaved, selectedMonth }) {
             {getSubcats(editCat).length > 0 && (
               <SubcatSelect cat={editCat} value={editSubcat} onChange={setEditSubcat} />
             )}
-            <div className="field" style={{ gridColumn: 'span 2' }}><label>Description</label><input type="text" value={editDesc} onChange={e => setEditDesc(e.target.value)} /></div>
+            <div className="field" style={{ gridColumn: 'span 2' }}><label>{t(lang,'description')}</label><input type="text" value={editDesc} onChange={e => setEditDesc(e.target.value)} /></div>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
             <button className="primary-btn" onClick={saveEdit} disabled={editSaving} style={{ flex: 1 }}>
-              {editSaving ? 'Saving...' : 'Save changes'}
+              {editSaving ? t(lang,'saving') : t(lang,'saveChanges')}
             </button>
             <button onClick={() => setEditExp(null)} style={{ flex: 1, background: '#f5f5f5', border: '1px solid #ddd', borderRadius: 8, padding: 10, cursor: 'pointer', fontSize: 14 }}>
               Cancel
@@ -966,10 +967,10 @@ function ExpensesTab({ onSaved, selectedMonth }) {
       )}
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <div className="card-title">Log an expense</div>
+        <div className="card-title">{t(lang,'logExpense')}</div>
         <div className="field-grid">
-          <div className="field"><label>Date</label><input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
-          <div className="field"><label>Category</label>
+          <div className="field"><label>{t(lang,'date')}</label><input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
+          <div className="field"><label>{t(lang,'category')}</label>
             <select value={category} onChange={e => { setCategory(e.target.value); setSubcategory(''); }}>
               {Object.entries(catLabels).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
@@ -978,21 +979,21 @@ function ExpensesTab({ onSaved, selectedMonth }) {
             <SubcatSelect cat={category} value={subcategory} onChange={setSubcategory} />
           )}
           <div className="field"><label>Amount ($)</label><input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="e.g. 450" min="0" /></div>
-          <div className="field"><label>Description</label><input type="text" value={desc} onChange={e => setDesc(e.target.value)} placeholder="e.g. Meat supplier" /></div>
+          <div className="field"><label>{t(lang,'description')}</label><input type="text" value={desc} onChange={e => setDesc(e.target.value)} placeholder="e.g. Meat supplier" /></div>
         </div>
         {msg && <div className={`msg ${msg === 'Saved!' ? 'msg-ok' : 'msg-err'}`}>{msg}</div>}
-        <button className="primary-btn" onClick={save} disabled={saving}>{saving ? 'Saving...' : 'Save expense'}</button>
+        <button className="primary-btn" onClick={save} disabled={saving}>{saving ? t(lang,'saving') : t(lang,'saveExpense')}</button>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <div className="section-title" style={{ margin: 0 }}>This month ({expenses.length} expenses)</div>
+        <div className="section-title" style={{ margin: 0 }}>{t(lang,'thisMonth')} ({expenses.length} {t(lang,'expenses')})</div>
         {expenses.length > 0 && (
           <button onClick={() => exportExpenses(expenses, thisMonth())} style={{ background: '#E6F1FB', border: 'none', borderRadius: 6, padding: '6px 12px', fontSize: 12, color: '#185FA5', cursor: 'pointer' }}>
-            Download Excel
+            {t(lang,'downloadExcel')}
           </button>
         )}
       </div>
       {expenses.length === 0
-        ? <div className="empty-state"><p>No expenses logged yet.</p></div>
+        ? <div className="empty-state"><p>{t(lang,'noExpensesYet')}</p></div>
         : expenses.map(e => (
           <div className="list-item" key={e.id}>
             <span className="list-date">{e.date}</span>
@@ -1003,7 +1004,7 @@ function ExpensesTab({ onSaved, selectedMonth }) {
               {e.description && <span className="list-desc">{e.description}</span>}
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
-              <button onClick={() => openEdit(e)} style={{ background: '#E6F1FB', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, color: '#185FA5', cursor: 'pointer' }}>Edit</button>
+              <button onClick={() => openEdit(e)} style={{ background: '#E6F1FB', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, color: '#185FA5', cursor: 'pointer' }}>{t(lang,'edit')}</button>
               <button className="del-btn" onClick={() => del(e.id)}>x</button>
             </div>
           </div>
@@ -1013,7 +1014,7 @@ function ExpensesTab({ onSaved, selectedMonth }) {
   );
 }
 
-function InventoryTab({ onSaved, selectedMonth }) {
+function InventoryTab({ onSaved, selectedMonth, lang = 'en' }) {
   const emptyState = {
     meat_seafood: '', produce: '', dairy_eggs: '', dry_goods: '',
     beverages_coffee: '', beverages_soft_drinks: '', beverages_alcohol: '', other: ''
@@ -1026,14 +1027,14 @@ function InventoryTab({ onSaved, selectedMonth }) {
   const [msg, setMsg] = useState('');
 
   const categories = [
-    { key: 'meat_seafood', label: 'Meat and Seafood' },
-    { key: 'produce', label: 'Produce' },
-    { key: 'dairy_eggs', label: 'Dairy and Eggs' },
-    { key: 'dry_goods', label: 'Dry Goods and Pantry' },
-    { key: 'beverages_coffee', label: 'Beverages - Coffee and Tea' },
-    { key: 'beverages_soft_drinks', label: 'Beverages - Soft Drinks' },
-    { key: 'beverages_alcohol', label: 'Beverages - Alcohol' },
-    { key: 'other', label: 'Other' },
+    { key: 'meat_seafood', label: t(lang,'catMeatSeafood') },
+    { key: 'produce', label: t(lang,'catProduce') },
+    { key: 'dairy_eggs', label: t(lang,'catDairyEggs') },
+    { key: 'dry_goods', label: t(lang,'catDryGoods') },
+    { key: 'beverages_coffee', label: t(lang,'catBevCoffee') },
+    { key: 'beverages_soft_drinks', label: t(lang,'catBevSoft') },
+    { key: 'beverages_alcohol', label: t(lang,'catBevAlcohol') },
+    { key: 'other', label: t(lang,'catBevOther') },
   ];
 
   const loadInventory = useCallback(async () => {
@@ -1070,7 +1071,7 @@ function InventoryTab({ onSaved, selectedMonth }) {
       onSaved();
       setTimeout(() => setMsg(''), 2000);
     } catch (e) {
-      setMsg('Error saving. Please try again.');
+      setMsg(t(lang,'errorSaving'));
     } finally {
       setSaving('');
     }
@@ -1082,14 +1083,14 @@ function InventoryTab({ onSaved, selectedMonth }) {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <div className="section-title" style={{ margin: 0 }}>Inventory count</div>
+        <div className="section-title" style={{ margin: 0 }}>{t(lang,'inventoryCount')}</div>
         <input type="month" value={month} onChange={e => setMonth(e.target.value)}
           style={{ border: '1px solid #ddd', borderRadius: 8, padding: '6px 10px', fontSize: 13 }} />
       </div>
       {msg && <div className={`msg ${msg.includes('Error') ? 'msg-err' : 'msg-ok'}`} style={{ marginBottom: 12 }}>{msg}</div>}
       <div className="two-col">
         <div className="card">
-          <div className="card-title">Opening inventory - start of month</div>
+          <div className="card-title">{t(lang,'openingInventory')}</div>
           {categories.map(c => (
             <div className="field" key={c.key} style={{ marginBottom: 8 }}>
               <label>{c.label}</label>
@@ -1099,14 +1100,14 @@ function InventoryTab({ onSaved, selectedMonth }) {
             </div>
           ))}
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600, padding: '8px 0', borderTop: '1px solid #f0f0f0', marginTop: 4 }}>
-            <span>Total opening</span><span>{fmt(totalOpening)}</span>
+            <span>{t(lang,'totalOpening')}</span><span>{fmt(totalOpening)}</span>
           </div>
           <button className="primary-btn" onClick={() => save('opening')} disabled={saving === 'opening'}>
-            {saving === 'opening' ? 'Saving...' : 'Save opening inventory'}
+            {saving === 'opening' ? t(lang,'saving') : t(lang,'saveOpeningInventory')}
           </button>
         </div>
         <div className="card">
-          <div className="card-title">Closing inventory - end of month</div>
+          <div className="card-title">{t(lang,'closingInventory')}</div>
           {categories.map(c => (
             <div className="field" key={c.key} style={{ marginBottom: 8 }}>
               <label>{c.label}</label>
@@ -1116,25 +1117,25 @@ function InventoryTab({ onSaved, selectedMonth }) {
             </div>
           ))}
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600, padding: '8px 0', borderTop: '1px solid #f0f0f0', marginTop: 4 }}>
-            <span>Total closing</span><span>{fmt(totalClosing)}</span>
+            <span>{t(lang,'totalClosing')}</span><span>{fmt(totalClosing)}</span>
           </div>
           <button className="primary-btn" onClick={() => save('closing')} disabled={saving === 'closing'}>
-            {saving === 'closing' ? 'Saving...' : 'Save closing inventory'}
+            {saving === 'closing' ? t(lang,'saving') : t(lang,'saveClosingInventory')}
           </button>
         </div>
       </div>
       <div className="card" style={{ marginTop: 4 }}>
-        <div className="card-title">Real food cost calculation</div>
-        <div className="pl-line sub"><span>Opening inventory</span><span>{fmt(totalOpening)}</span></div>
-        <div className="pl-line sub"><span>Plus purchases from expenses tab</span><span>--</span></div>
-        <div className="pl-line sub"><span>Minus closing inventory</span><span>{fmt(totalClosing)}</span></div>
-        <div className="pl-line total"><span>Inventory variance</span><span>{fmt(Math.max(0, totalOpening - totalClosing))}</span></div>
+        <div className="card-title">{t(lang,'realFoodCost')}</div>
+        <div className="pl-line sub"><span>{t(lang,'openingInventory')}</span><span>{fmt(totalOpening)}</span></div>
+        <div className="pl-line sub"><span>{t(lang,'plusPurchases')}</span><span>--</span></div>
+        <div className="pl-line sub"><span>{t(lang,'minusClosing')}</span><span>{fmt(totalClosing)}</span></div>
+        <div className="pl-line total"><span>{t(lang,'inventoryVariance')}</span><span>{fmt(Math.max(0, totalOpening - totalClosing))}</span></div>
       </div>
     </div>
   );
 }
 
-function AdvisorTab({ pl }) {
+function AdvisorTab({ pl, lang = 'en' }) {
   const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -1150,7 +1151,7 @@ function AdvisorTab({ pl }) {
       const res = await API.post('/insights/generate', { pl });
       setInsights(res.data.insights);
     } catch (err) {
-      setError('Could not generate insights. Check your Anthropic API key.');
+      setError(t(lang,'couldNotGenerate'));
     } finally {
       setLoading(false);
     }
@@ -1161,12 +1162,12 @@ function AdvisorTab({ pl }) {
       <div className="card">
         <div className="ai-header">
           <div className="ai-dot" />
-          <div className="ai-title">AI advisor powered by Claude</div>
+          <div className="ai-title">{t(lang,'aiAdvisorTitle')}</div>
         </div>
         {!pl || pl.total_revenue === 0
-          ? <div className="empty-state"><p>Add sales data first to get AI insights.</p></div>
+          ? <div className="empty-state"><p>{t(lang,'addDataFirst')}</p></div>
           : loading
-          ? <div className="insight ins-info"><div className="ins-title">Analyzing your numbers...</div><p>Claude is reviewing your data.</p></div>
+          ? <div className="insight ins-info"><div className="ins-title">{t(lang,'analyzing')}</div><p>{t(lang,'claudeReviewing')}</p></div>
           : insights
           ? insights.map((ins, i) => (
             <div key={i} className={`insight ${severityClass[ins.severity] || 'ins-info'}`}>
@@ -1176,29 +1177,30 @@ function AdvisorTab({ pl }) {
             </div>
           ))
           : <div className="insight ins-info">
-              <div className="ins-title">Ready to analyze</div>
+              <div className="ins-title">{t(lang,'readyToAnalyze')}</div>
               <p>Revenue: {fmt(pl.total_revenue)} Food cost: {pct(pl.food_cost_pct)} Labor: {pct(pl.labor_pct)} Net margin: {pct(pl.net_margin_pct)}</p>
             </div>
         }
         {error && <div className="msg msg-err" style={{ marginTop: 10 }}>{error}</div>}
         {pl && pl.total_revenue > 0 && !loading && (
           <button className="secondary-btn" style={{ marginTop: 12 }} onClick={generate}>
-            {insights ? 'Regenerate insights' : 'Generate AI insights'}
+            {insights ? t(lang,'regenerateInsights') : t(lang,'generateInsights')}
           </button>
         )}
       </div>
       <div className="benchmarks">
-        Benchmarks: food cost 28-32% labor 28-35% prime cost under 60% net margin over 10% bev mix 25-35%
+        {t(lang,'benchmarks')}
       </div>
     </div>
   );
 }
 
-function SettingsTab({ onSaved }) {
+function SettingsTab({ onSaved, lang, setLang }) {
   const [name, setName] = useState('');
   const [currency, setCurrency] = useState('USD');
   const [weeklyTarget, setWeeklyTarget] = useState('');
   const [foodCostAlert, setFoodCostAlert] = useState('35');
+  const [langSetting, setLangSetting] = useState(lang || 'en');
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
 
@@ -1212,7 +1214,7 @@ function SettingsTab({ onSaved }) {
   }, []); // eslint-disable-line
 
   async function save() {
-    if (!name) { setMsg('Please enter a restaurant name.'); return; }
+    if (!name) { setMsg(t(lang,'pleaseEnterName')); return; }
     setSaving(true); setMsg('');
     try {
       await API.put('/restaurant', {
@@ -1221,11 +1223,11 @@ function SettingsTab({ onSaved }) {
         weekly_revenue_target: Math.round((parseFloat(weeklyTarget) || 0) * 100),
         food_cost_alert_pct: parseFloat(foodCostAlert) || 35,
       });
-      setMsg('Saved!');
+      setMsg(t(lang,'saved'));
       onSaved();
       setTimeout(() => setMsg(''), 2000);
     } catch (e) {
-      setMsg('Error saving. Please try again.');
+      setMsg(t(lang,'errorSaving'));
     } finally {
       setSaving(false);
     }
@@ -1234,13 +1236,13 @@ function SettingsTab({ onSaved }) {
   return (
     <div>
       <div className="card" style={{ maxWidth: 480 }}>
-        <div className="card-title">Restaurant settings</div>
+        <div className="card-title">{t(lang,'restaurantSettings')}</div>
         <div className="field" style={{ marginBottom: 12 }}>
-          <label>Restaurant name</label>
+          <label>{t(lang,'restaurantName')}</label>
           <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Le Petit Bistro" />
         </div>
         <div className="field" style={{ marginBottom: 12 }}>
-          <label>Currency</label>
+          <label>{t(lang,'currency')}</label>
           <select value={currency} onChange={e => setCurrency(e.target.value)}>
             <option value="USD">USD ($)</option>
             <option value="EUR">EUR (€)</option>
@@ -1251,20 +1253,28 @@ function SettingsTab({ onSaved }) {
             <option value="AUD">AUD ($)</option>
           </select>
         </div>
-        <div className="card-title" style={{ marginTop: 20, marginBottom: 12, fontSize: 13, color: '#888' }}>TARGETS AND ALERTS</div>
+        <div className="card-title" style={{ marginTop: 20, marginBottom: 12, fontSize: 13, color: '#888' }}>{t(lang,'targetsAlerts')}</div>
         <div className="field" style={{ marginBottom: 12 }}>
           <label>Weekly revenue target ($)</label>
           <input type="number" value={weeklyTarget} onChange={e => setWeeklyTarget(e.target.value)} placeholder="e.g. 5000" min="0" />
-          <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>Shows a progress bar on your dashboard each week</div>
+          <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>{t(lang,'weeklyTargetHint')}</div>
         </div>
         <div className="field" style={{ marginBottom: 12 }}>
-          <label>Food cost alert threshold (%)</label>
+          <label>{t(lang,'foodCostAlertThreshold')}</label>
           <input type="number" value={foodCostAlert} onChange={e => setFoodCostAlert(e.target.value)} placeholder="e.g. 35" min="0" max="100" />
-          <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>Shows a warning when food cost % exceeds this number</div>
+          <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>{t(lang,'foodCostAlertHint')}</div>
         </div>
-        {msg && <div className={`msg ${msg === 'Saved!' ? 'msg-ok' : 'msg-err'}`} style={{ marginBottom: 8 }}>{msg}</div>}
+                <div className="field" style={{ marginBottom: 12 }}>
+          <label>{t(lang,'language')}</label>
+          <select value={langSetting} onChange={e => setLangSetting(e.target.value)}>
+            {Object.entries(languageNames).map(([code, name]) => (
+              <option key={code} value={code}>{name}</option>
+            ))}
+          </select>
+        </div>
+        {msg && <div className={`msg ${msg === t(lang,'saved') ? 'msg-ok' : 'msg-err'}`} style={{ marginBottom: 8 }}>{msg}</div>}
         <button className="primary-btn" onClick={save} disabled={saving}>
-          {saving ? 'Saving...' : 'Save settings'}
+          {saving ? t(lang,'saving') : t(lang,'saveSettings')}
         </button>
       </div>
     </div>
@@ -1291,6 +1301,7 @@ export default function App() {
   const [plLoading, setPlLoading] = useState(false);
   const [subscription, setSubscription] = useState(null);
   const [showPricing, setShowPricing] = useState(false);
+  const [lang, setLang] = useState('en');
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
@@ -1350,12 +1361,20 @@ export default function App() {
     }
   }, []);
 
+  const loadLanguage = useCallback(async () => {
+    try {
+      const res = await API.get('/restaurant');
+      setLang(res.data.language || 'en');
+    } catch (e) {}
+  }, []); // eslint-disable-line
+
   useEffect(() => {
     if (session) {
       loadPL();
       loadSubscription();
+      loadLanguage();
     }
-  }, [session, loadPL, loadSubscription]);
+  }, [session, loadPL, loadSubscription, loadLanguage]);
 
   async function handleUpgrade(plan) {
     try {
@@ -1385,12 +1404,12 @@ export default function App() {
   if (showPricing) return <Pricing subscription={subscription} onLogin={() => setShowPricing(false)} onUpgrade={handleUpgrade} />;
 
   const tabs = [
-    { id: 'dashboard', label: 'Dashboard' },
-    { id: 'entry', label: 'Enter data' },
-    { id: 'expenses', label: 'Expenses' },
-    { id: 'inventory', label: 'Inventory' },
-    { id: 'advisor', label: 'AI advisor' },
-    { id: 'settings', label: 'Settings' },
+    { id: 'dashboard', label: t(lang, 'dashboard') },
+    { id: 'entry', label: t(lang, 'enterData') },
+    { id: 'expenses', label: t(lang, 'expenses') },
+    { id: 'inventory', label: t(lang, 'inventory') },
+    { id: 'advisor', label: t(lang, 'aiAdvisor') },
+    { id: 'settings', label: t(lang, 'settings') },
   ];
 
   const daysLeft = subscription && subscription.trial_ends_at
@@ -1411,10 +1430,10 @@ export default function App() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {daysLeft !== null && daysLeft <= 7 && (
             <button className="trial-warning" onClick={() => setShowPricing(true)}>
-              {daysLeft} days left in trial
+              {daysLeft} {t(lang, 'daysLeft')}
             </button>
           )}
-          <button className="logout-btn" onClick={logout}>Sign out</button>
+          <button className="logout-btn" onClick={logout}>{t(lang, 'signOut')}</button>
         </div>
       </nav>
       <main className="main-content">
@@ -1438,8 +1457,8 @@ export default function App() {
               }}
               style={{ border: '1px solid #ddd', borderRadius: 8, padding: '5px 10px', fontSize: 13, color: '#1a1a1a' }}
             >
-              <option value="prev_month">vs Previous month</option>
-              <option value="prev_year">vs Same month last year</option>
+              <option value="prev_month">{t(lang, 'vsPrevMonth')}</option>
+              <option value="prev_year">{t(lang, 'vsSameLastYear')}</option>
             </select>
             {selectedMonth !== thisMonth() && (
               <button
@@ -1452,16 +1471,16 @@ export default function App() {
           </div>
           {subscription && subscription.plan === 'trial' && (
             <span className="trial-badge" onClick={() => setShowPricing(true)}>
-              Free trial - {daysLeft} days left
+              {t(lang, 'freeTrial')} - {daysLeft} {t(lang, 'daysLeft')}
             </span>
           )}
         </div>
-        {tab === 'dashboard' && <Dashboard pl={pl} plCompare={plCompare} compareMode={compareMode} loading={plLoading} />}
-        {tab === 'entry' && <EntryTab onSaved={() => loadPL(selectedMonth, compareMode)} selectedMonth={selectedMonth} />}
-        {tab === 'expenses' && <ExpensesTab onSaved={() => loadPL(selectedMonth, compareMode)} selectedMonth={selectedMonth} />}
-        {tab === 'inventory' && <InventoryTab onSaved={() => loadPL(selectedMonth, compareMode)} selectedMonth={selectedMonth} />}
-        {tab === 'advisor' && <AdvisorTab pl={pl} />}
-        {tab === 'settings' && <SettingsTab onSaved={() => loadPL(selectedMonth, compareMode)} />}
+        {tab === 'dashboard' && <Dashboard pl={pl} plCompare={plCompare} compareMode={compareMode} loading={plLoading} lang={lang} />}
+        {tab === 'entry' && <EntryTab onSaved={() => loadPL(selectedMonth, compareMode)} selectedMonth={selectedMonth} lang={lang} />}
+        {tab === 'expenses' && <ExpensesTab onSaved={() => loadPL(selectedMonth, compareMode)} selectedMonth={selectedMonth} lang={lang} />}
+        {tab === 'inventory' && <InventoryTab onSaved={() => loadPL(selectedMonth, compareMode)} selectedMonth={selectedMonth} lang={lang} />}
+        {tab === 'advisor' && <AdvisorTab pl={pl} lang={lang} />}
+        {tab === 'settings' && <SettingsTab onSaved={() => loadPL(selectedMonth, compareMode)} lang={lang} setLang={setLang} />}
       </main>
     </div>
   );
