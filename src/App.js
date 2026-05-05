@@ -1490,7 +1490,7 @@ export default function App() {
         {tab === 'expenses' && <ExpensesTab onSaved={() => loadPL(selectedMonth, compareMode)} selectedMonth={selectedMonth} lang={lang} />}
         {tab === 'inventory' && <InventoryTab onSaved={() => loadPL(selectedMonth, compareMode)} selectedMonth={selectedMonth} lang={lang} />}
         {tab === 'advisor' && <AdvisorTab pl={pl} lang={lang} />}
-        {tab === 'settings' && <SettingsTab onSaved={() => loadPL(selectedMonth, compareMode)} lang={lang} setLang={setLangPersist} />
+        {tab === 'settings' && <SettingsTab onSaved={() => loadPL(selectedMonth, compareMode)} lang={lang} setLang={setLangPersist} />}
       </main>
     </div>
   );
