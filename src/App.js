@@ -1201,6 +1201,9 @@ function SettingsTab({ onSaved, lang, setLang }) {
   const [weeklyTarget, setWeeklyTarget] = useState('');
   const [foodCostAlert, setFoodCostAlert] = useState('35');
   const [langSetting, setLangSetting] = useState(lang || 'en');
+
+  // Sync local langSetting when parent lang changes
+  useEffect(() => { setLangSetting(lang || 'en'); }, [lang]); // eslint-disable-line
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
 
@@ -1301,7 +1304,7 @@ export default function App() {
   const [plLoading, setPlLoading] = useState(false);
   const [subscription, setSubscription] = useState(null);
   const [showPricing, setShowPricing] = useState(false);
-  const [lang, setLang] = useState('en');
+  const [lang, setLang] = useState(() => localStorage.getItem('winprofit_lang') || 'en');
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
@@ -1364,7 +1367,9 @@ export default function App() {
   const loadLanguage = useCallback(async () => {
     try {
       const res = await API.get('/restaurant');
-      setLang(res.data.language || 'en');
+      const savedLang = res.data.language || 'en';
+      setLang(savedLang);
+      localStorage.setItem('winprofit_lang', savedLang);
     } catch (e) {}
   }, []); // eslint-disable-line
 
@@ -1391,6 +1396,11 @@ export default function App() {
     }
     setShowOnboarding(false);
     loadPL(selectedMonth, compareMode);
+  }
+
+  function setLangPersist(l) {
+    setLang(l);
+    localStorage.setItem('winprofit_lang', l);
   }
 
   function logout() {
@@ -1480,7 +1490,7 @@ export default function App() {
         {tab === 'expenses' && <ExpensesTab onSaved={() => loadPL(selectedMonth, compareMode)} selectedMonth={selectedMonth} lang={lang} />}
         {tab === 'inventory' && <InventoryTab onSaved={() => loadPL(selectedMonth, compareMode)} selectedMonth={selectedMonth} lang={lang} />}
         {tab === 'advisor' && <AdvisorTab pl={pl} lang={lang} />}
-        {tab === 'settings' && <SettingsTab onSaved={() => loadPL(selectedMonth, compareMode)} lang={lang} setLang={setLang} />}
+        {tab === 'settings' && <SettingsTab onSaved={() => loadPL(selectedMonth, compareMode)} lang={lang} setLang={setLangPersist} />
       </main>
     </div>
   );
