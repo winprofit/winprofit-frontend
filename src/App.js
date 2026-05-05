@@ -371,8 +371,8 @@ function Dashboard({ pl, plCompare, compareMode, loading, lang = 'en' }) {
       Promise.all(months.map(mo => API.get(`/pl?month=${mo}`).then(r => ({
         month: mo.slice(5) + '/' + mo.slice(2, 4),
         Revenue: parseFloat(r.data.total_revenue.toFixed(0)),
-        t(lang,'netProfit'): parseFloat(r.data.net_profit.toFixed(0)),
-      })).catch(() => ({ month: mo.slice(5), Revenue: 0, t(lang,'netProfit'): 0 }))))
+        'Net profit': parseFloat(r.data.net_profit.toFixed(0)),
+      })).catch(() => ({ month: mo.slice(5), Revenue: 0, 'Net profit': 0 }))))
         .then(results => setTrendData(results));
     }
   }, [pl, plCompare]); // eslint-disable-line
