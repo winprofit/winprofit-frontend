@@ -1446,7 +1446,7 @@ export default function App() {
           <button className="logout-btn" onClick={logout}>{t(lang, 'signOut')}</button>
         </div>
       </nav>
-      <main className="main-content">
+      <main className="main-content" key={lang}>
         <div className="month-bar">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <input
