@@ -168,6 +168,7 @@
 .empty-state p { font-size: 14px; margin-bottom: 6px; }
 .empty-icon { font-size: 32px; margin-bottom: 12px; }
 .loading { text-align: center; padding: 40px; color: #aaa; font-size: 14px; }
+
 /* Pricing */
 .pricing-wrap { min-height: 100vh; background: #f5f5f5; display: flex; align-items: center; justify-content: center; padding: 40px 24px; }
 .pricing-inner { max-width: 700px; width: 100%; }
@@ -189,3 +190,120 @@
 .plan-features li::before { content: "✓  "; color: #1D9E75; font-weight: 600; }
 .trial-badge { font-size: 12px; color: #185FA5; background: #E6F1FB; padding: 4px 10px; border-radius: 10px; cursor: pointer; margin-left: 12px; }
 .trial-warning { background: #FAEEDA; color: #854F0B; border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer; }
+
+/* ============================================
+   MOBILE RESPONSIVE STYLES
+   ============================================ */
+
+@media (max-width: 768px) {
+
+  /* Top nav */
+  .topnav {
+    padding: 0 12px;
+    gap: 8px;
+    flex-wrap: nowrap;
+    height: auto;
+    min-height: 52px;
+    padding-top: 6px;
+    padding-bottom: 0;
+    overflow-x: visible;
+  }
+  .brand { font-size: 15px; flex-shrink: 0; }
+  .nav-tabs {
+    gap: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex: 1;
+  }
+  .nav-tabs::-webkit-scrollbar { display: none; }
+  .nav-tab {
+    padding: 0 9px;
+    font-size: 12px;
+    height: 44px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .logout-btn { font-size: 11px; padding: 4px 8px; flex-shrink: 0; white-space: nowrap; }
+  .trial-warning { font-size: 11px; padding: 4px 7px; flex-shrink: 0; }
+  .trial-badge { font-size: 11px; margin-left: 4px; padding: 3px 7px; }
+
+  /* Main content */
+  .main-content { padding: 10px 12px; }
+  .month-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
+  .month-bar input[type="month"] { font-size: 12px; padding: 5px 8px; max-width: 130px; }
+  .month-bar select { font-size: 12px; padding: 5px 6px; }
+
+  /* Metric cards - 2x2 on mobile */
+  .metrics-grid { grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .metric-card { padding: 10px 12px; }
+  .metric-value { font-size: 17px; }
+  .metric-label { font-size: 10px; }
+  .metric-sub { font-size: 10px; }
+
+  /* Two column - stack */
+  .two-col { grid-template-columns: 1fr; gap: 10px; }
+
+  /* Cards */
+  .card { padding: 12px; margin-bottom: 10px; border-radius: 10px; }
+  .card-title { font-size: 10px; margin-bottom: 10px; }
+
+  /* Forms - single column */
+  .field-grid { grid-template-columns: 1fr; gap: 8px; margin-bottom: 10px; }
+  .field input, .field select { font-size: 14px; padding: 10px 12px; }
+  .field label { font-size: 12px; }
+
+  /* Buttons - larger tap targets */
+  .primary-btn { padding: 13px; font-size: 15px; }
+  .secondary-btn { padding: 12px; font-size: 13px; }
+
+  /* List items */
+  .list-item { flex-wrap: wrap; padding: 10px; gap: 6px; }
+  .list-date { width: 75px; font-size: 11px; }
+  .list-vals { gap: 6px; }
+  .list-vals span { font-size: 12px; }
+
+  /* Bar chart */
+  .bar-label { width: 58px; font-size: 11px; }
+  .bar-val { font-size: 11px; width: 34px; }
+
+  /* P&L lines */
+  .pl-line { font-size: 12px; }
+  .pl-line.total { font-size: 13px; }
+
+  /* Auth */
+  .auth-wrap { padding: 20px 16px; align-items: flex-start; padding-top: 60px; }
+  .auth-card { width: 100%; max-width: 100%; padding: 24px 20px; border-radius: 12px; }
+  .brand-lg { font-size: 24px; }
+
+  /* Pricing */
+  .plans-grid { grid-template-columns: 1fr; gap: 24px; }
+  .pricing-wrap { padding: 20px 16px; align-items: flex-start; padding-top: 40px; }
+  .plan-card { padding: 22px 18px; }
+  .plan-price { font-size: 30px; }
+
+  /* Insights */
+  .insight { font-size: 12px; padding: 10px 12px; }
+
+  /* Section title */
+  .section-title { font-size: 12px; }
+
+  /* Benchmarks */
+  .benchmarks { font-size: 10px; }
+
+  /* Modal overlay */
+  div[style*="position: fixed"][style*="zIndex: 1000"] > div[style*="background: #fff"] {
+    width: 92vw !important;
+    padding: 16px !important;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 400px) {
+  .metric-value { font-size: 15px; }
+  .nav-tab { font-size: 11px; padding: 0 7px; }
+  .main-content { padding: 8px 10px; }
+  .metrics-grid { gap: 6px; }
+  .metric-card { padding: 8px 10px; }
+}
